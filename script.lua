@@ -165,22 +165,26 @@ local TeamCache = {}
 
 -- Obtém o time de um jogador
 local function GetPlayerTeam(player)
-    if player.Team then return player.Team end
-    if player.TeamColor then return tostring(player.TeamColor) end
+    if not player then return nil end
+    if player.Team and player.Team.Name ~= "" then
+        return player.Team
+    end
+    if player.TeamColor then
+        return player.TeamColor
+    end
     return nil
 end
 
 -- Verifica se dois jogadores estão no mesmo time
 local function IsSameTeam(p1, p2)
-    local t1 = GetPlayerTeam(p1)
-    local t2 = GetPlayerTeam(p2)
-    
-    if t1 and t2 then return t1 == t2 end
-    
-    if p1.TeamColor and p2.TeamColor then
-        return p1.TeamColor == p2.TeamColor
+    if not p1 or not p2 then
+        return false
     end
-    
+    local t1 = TeamCache[p1.UserId] or GetPlayerTeam(p1)
+    local t2 = TeamCache[p2.UserId] or GetPlayerTeam(p2)
+    if t1 and t2 then
+        return t1 == t2
+    end
     return false
 end
 
@@ -212,7 +216,7 @@ local function MonitorTeamChanges()
             player.CharacterAdded:Connect(function()
                 TeamCache[player.UserId] = GetPlayerTeam(player)
                 if Config.ESP.Enabled then
-                    wait(0.3)
+                    task.wait(0.3)
                     UpdateESP()
                 end
             end)
@@ -244,7 +248,7 @@ Icon.AutoButtonColor = false
 Icon.Parent = ScreenGui
 
 local IconCorner = Instance.new("UICorner")
-IconCorner.CornerRadius = UDim.new(1, 0)
+IconCorner.CornerRadius = UDim.new(0, 10)
 IconCorner.Parent = Icon
 
 local IconStroke = Instance.new("UIStroke")
@@ -1029,8 +1033,8 @@ local function CreateStatsDisplay()
     
     MS.StatsContainer = Instance.new("Frame")
     MS.StatsContainer.Name = "StatsContainer"
-    MS.StatsContainer.Size = UDim2.new(0, 180, 0, 60)
-    MS.StatsContainer.Position = UDim2.new(1, -190, 0, 10)
+    MS.StatsContainer.Size = UDim2.new(0, 150, 0, 46)
+    MS.StatsContainer.Position = UDim2.new(1, -160, 0, 10)
     MS.StatsContainer.BackgroundColor3 = C.PretoMais
     MS.StatsContainer.BorderSizePixel = 0
     MS.StatsContainer.ZIndex = 1000
@@ -1062,7 +1066,7 @@ local function CreateStatsDisplay()
     
     -- Texto FPS
     MS.FPSLabel = Instance.new("TextLabel")
-    MS.FPSLabel.Size = UDim2.new(0, 100, 0, 14)
+    MS.FPSLabel.Size = UDim2.new(0, 104, 0, 14)
     MS.FPSLabel.Position = UDim2.new(0, 24, 0, 6)
     MS.FPSLabel.BackgroundTransparency = 1
     MS.FPSLabel.Text = "FPS: --"
@@ -1089,7 +1093,7 @@ local function CreateStatsDisplay()
     
     -- Texto PING
     MS.PingLabel = Instance.new("TextLabel")
-    MS.PingLabel.Size = UDim2.new(0, 120, 0, 14)
+    MS.PingLabel.Size = UDim2.new(0, 118, 0, 14)
     MS.PingLabel.Position = UDim2.new(0, 24, 0, 26)
     MS.PingLabel.BackgroundTransparency = 1
     MS.PingLabel.Text = "PING: --"
@@ -1102,9 +1106,13 @@ local function CreateStatsDisplay()
     
     -- Atualizar FPS e PING em tempo real
     coroutine.wrap(function()
-        while MS.StatsContainer do
-            -- FPS
-            local fps = math.floor(1 / RunService.RenderStepped:Wait())
+        local lastTick = tick()
+        while MS.StatsContainer and MS.StatsContainer.Parent do
+            local now = tick()
+            local dt = now - lastTick
+            lastTick = now
+            if dt <= 0 then dt = 0.033 end
+            local fps = math.floor(1 / dt)
             MS.CurrentFPS = fps
             
             if MS.FPSLabel then
@@ -1133,6 +1141,7 @@ local function CreateStatsDisplay()
                     end
                 end
             end)
+            task.wait(0.15)
         end
     end)()
 end
@@ -1165,10 +1174,10 @@ local function UpdateESP()
         if not char then continue end
         
         local hum = char:FindFirstChild("Humanoid")
-        local head = char:FindFirstChild("Head")
-        local root = char:FindFirstChild("HumanoidRootPart")
+        local head = char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+        local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("LowerTorso")
         
-        if not hum or hum.Health <= 0 or not head or not root then continue end
+        if not hum or hum.Health <= 0 or not root or not head then continue end
         
         local dist = (myRoot.Position - root.Position).Magnitude
         if dist > Config.ESP.MaxDistance then continue end
@@ -1181,55 +1190,69 @@ local function UpdateESP()
         local boxColor = isTeam and Config.ESP.TeamBoxColor or Config.ESP.BoxColor
         local nameColor = isTeam and Config.ESP.TeamNameColor or Config.ESP.NameColor
         
-        -- Box
         if Config.ESP.Boxes then
             local hl = Instance.new("Highlight")
             hl.FillColor = boxColor
-            hl.FillTransparency = 0.5
+            hl.FillTransparency = 0.65
             hl.OutlineColor = boxColor
+            hl.OutlineTransparency = 0.35
             hl.Adornee = char
-            hl.Parent = char
+            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            hl.Parent = ScreenGui
             table.insert(MS.ESP_Objects, hl)
         end
         
-        -- Billboard com nome, vida e distância
         if Config.ESP.Names or Config.ESP.HealthBar or Config.ESP.Distance then
             local bill = Instance.new("BillboardGui")
-            bill.Size = UDim2.new(0, 140, 0, 50)
-            bill.StudsOffset = Vector3.new(0, 3.5, 0)
+            bill.Size = UDim2.new(0, 150, 0, 50)
+            bill.StudsOffset = Vector3.new(0, 2.7, 0)
             bill.AlwaysOnTop = true
+            bill.LightInfluence = 0
+            bill.ClipsDescendants = true
             bill.Parent = head
             table.insert(MS.ESP_Objects, bill)
             
             local y = 0
-            
             if Config.ESP.Names then
                 local nl = Instance.new("TextLabel")
                 nl.Size = UDim2.new(1, 0, 0, 16)
+                nl.Position = UDim2.new(0, 0, 0, y)
                 nl.BackgroundTransparency = 1
                 nl.Text = player.Name .. (isTeam and " [ALIADO]" or "")
                 nl.TextColor3 = nameColor
                 nl.Font = Enum.Font.GothamBold
                 nl.TextSize = 12
-                nl.TextStrokeTransparency = 0.5
+                nl.TextStrokeTransparency = 0.7
                 nl.Parent = bill
                 y = y + 17
             end
             
             if Config.ESP.HealthBar then
+                local healthPercent = math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
                 local bar = Instance.new("Frame")
-                bar.Size = UDim2.new(1, 0, 0, 4)
+                bar.Size = UDim2.new(1, 0, 0, 6)
                 bar.Position = UDim2.new(0, 0, 0, y)
-                bar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                bar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
                 bar.BorderSizePixel = 0
                 bar.Parent = bill
                 
                 local fill = Instance.new("Frame")
-                fill.Size = UDim2.new(hum.Health / hum.MaxHealth, 0, 1, 0)
-                fill.BackgroundColor3 = Color3.fromRGB(0, 255, 50)
+                fill.Size = UDim2.new(healthPercent, 0, 1, 0)
+                fill.BackgroundColor3 = healthPercent > 0.6 and Color3.fromRGB(0, 220, 40) or (healthPercent > 0.3 and Color3.fromRGB(255, 210, 0) or Color3.fromRGB(255, 75, 75))
                 fill.BorderSizePixel = 0
                 fill.Parent = bar
-                y = y + 5
+                
+                local healthText = Instance.new("TextLabel")
+                healthText.Size = UDim2.new(1, 0, 0, 12)
+                healthText.Position = UDim2.new(0, 0, 0, 8)
+                healthText.BackgroundTransparency = 1
+                healthText.Text = math.floor(healthPercent * 100) .. "%"
+                healthText.TextColor3 = Color3.fromRGB(230, 230, 240)
+                healthText.Font = Enum.Font.Gotham
+                healthText.TextSize = 10
+                healthText.TextXAlignment = Enum.TextXAlignment.Center
+                healthText.Parent = bill
+                y = y + 18
             end
             
             if Config.ESP.Distance then
@@ -1241,6 +1264,7 @@ local function UpdateESP()
                 dl.TextColor3 = Config.ESP.DistanceColor
                 dl.Font = Enum.Font.Gotham
                 dl.TextSize = 10
+                dl.TextStrokeTransparency = 0.8
                 dl.Parent = bill
             end
         end
@@ -1677,7 +1701,7 @@ Players.PlayerAdded:Connect(function(player)
     player.CharacterAdded:Connect(function()
         TeamCache[player.UserId] = GetPlayerTeam(player)
         if Config.ESP.Enabled then
-            wait(0.3)
+            task.wait(0.3)
             UpdateESP()
         end
     end)
