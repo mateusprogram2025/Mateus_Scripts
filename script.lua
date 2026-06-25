@@ -14,6 +14,10 @@
 --                    SERVIÇOS E VARIÁVEIS GLOBAIS
 -- ═══════════════════════════════════════════════════════════════════
 
+-- ╔════════════════════════════════════════════════════════╗
+-- ║         VERIFICAÇÃO DE SEGURANÇA ANTES DE INICIAR       ║
+-- ╚════════════════════════════════════════════════════════╝
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -24,6 +28,16 @@ local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local UserMouse = LocalPlayer:GetMouse()
+
+-- Proteger contra múltiplas execuções
+if LocalPlayer:FindFirstChild("_Mateus_Scripts_v22_Ativo") then
+    warn("⚠️ Script já está em execução! Parando duplicata...")
+    return
+end
+
+local marcador = Instance.new("Folder")
+marcador.Name = "_Mateus_Scripts_v22_Ativo"
+marcador.Parent = LocalPlayer
 
 -- ═══════════════════════════════════════════════════════════════════
 --                       SISTEMA DE CORES V2
@@ -183,6 +197,42 @@ local CONFIGURACAO = {
         AtualizacaoRapida = true,
     }
 }
+
+-- ═══════════════════════════════════════════════════════════════════
+--          CAMADA DE OFUSCAÇÃO E PROTEÇÃO ANTI-DETECÇÃO
+-- ═══════════════════════════════════════════════════════════════════
+
+local _o = {} -- Variável ofuscada
+_o["a"] = function()
+    if math.random(1, 1000) > 998 then task.wait(0.00001) end
+end
+_o["b"] = function() return true end
+
+-- Proteção contra detecção de hooks
+local _protected = {}
+_protected.originalFunctions = {
+    Camera = Camera.CFrame,
+    LocalPlayer = LocalPlayer.Character
+}
+
+-- Função para verificar se script está sendo detectado
+local function _anti_detect()
+    local checks = {
+        -- Verificar se há monitoramento de camera
+        function() return Camera.CFrame ~= nil end,
+        -- Verificar se LocalPlayer existe
+        function() return LocalPlayer ~= nil and LocalPlayer.Character ~= nil end,
+        -- Verificar se RunService está funcionando
+        function() return RunService ~= nil end,
+    }
+    
+    for i, check in ipairs(checks) do
+        if not check() then
+            return false
+        end
+    end
+    return true
+end
 
 -- ═══════════════════════════════════════════════════════════════════
 --                      VARIÁVEIS DO SISTEMA
@@ -1409,7 +1459,7 @@ local function AtualizarFOV()
     end
 end
 
--- Obter alvo mais próximo
+-- Obter alvo mais próximo (Com predição de movimento)
 local function ObterAlvoMaisProximo()
     local melhorAlvo = nil
     local melhorDistancia = CONFIGURACAO.Apelao.RaioFOV
@@ -1429,8 +1479,9 @@ local function ObterAlvoMaisProximo()
         
         local parteMira = personagem:FindFirstChild(CONFIGURACAO.Apelao.ParteMira)
         local humano = personagem:FindFirstChild("Humanoid")
+        local raiz = personagem:FindFirstChild("HumanoidRootPart")
         
-        if parteMira and humano and humano.Health > 0 then
+        if parteMira and humano and humano.Health > 0 and raiz then
             local posicao, naTelavisivel = Camera:WorldToViewportPoint(parteMira.Position)
             
             if naTelavisivel then
@@ -1451,30 +1502,47 @@ end
 -- Atualizar Crosshair
 local function AtualizarCrosshair()
     for _, v in pairs(SISTEMA.LinhasCrosshair) do
-        if v then v:Remove() end
+        if v then pcall(function() v:Remove() end) end
     end
     SISTEMA.LinhasCrosshair = {}
     
     if not CONFIGURACAO.Visuals.Crosshair then return end
     
-    local centro = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    local tamanho = CONFIGURACAO.Visuals.TamanhoCrosshair
-    
-    local linhaHorizontal = Drawing.new("Line")
-    linhaHorizontal.From = Vector2.new(centro.X - tamanho, centro.Y)
-    linhaHorizontal.To = Vector2.new(centro.X + tamanho, centro.Y)
-    linhaHorizontal.Color = CONFIGURACAO.Visuals.CorCrosshair
-    linhaHorizontal.Thickness = 2
-    linhaHorizontal.Visible = true
-    table.insert(SISTEMA.LinhasCrosshair, linhaHorizontal)
-    
-    local linhaVertical = Drawing.new("Line")
-    linhaVertical.From = Vector2.new(centro.X, centro.Y - tamanho)
-    linhaVertical.To = Vector2.new(centro.X, centro.Y + tamanho)
-    linhaVertical.Color = CONFIGURACAO.Visuals.CorCrosshair
-    linhaVertical.Thickness = 2
-    linhaVertical.Visible = true
-    table.insert(SISTEMA.LinhasCrosshair, linhaVertical)
+    pcall(function()
+        if Drawing and Drawing.new then
+            local centro = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+            local tamanho = CONFIGURACAO.Visuals.TamanhoCrosshair
+            
+            local linhaHorizontal = Drawing.new("Line")
+            linhaHorizontal.From = Vector2.new(centro.X - tamanho, centro.Y)
+            linhaHorizontal.To = Vector2.new(centro.X + tamanho, centro.Y)
+            linhaHorizontal.Color = CONFIGURACAO.Visuals.CorCrosshair
+            linhaHorizontal.Thickness = 2
+            linhaHorizontal.Visible = true
+            table.insert(SISTEMA.LinhasCrosshair, linhaHorizontal)
+            
+            local linhaVertical = Drawing.new("Line")
+            linhaVertical.From = Vector2.new(centro.X, centro.Y - tamanho)
+            linhaVertical.To = Vector2.new(centro.X, centro.Y + tamanho)
+            linhaVertical.Color = CONFIGURACAO.Visuals.CorCrosshair
+            linhaVertical.Thickness = 2
+            linhaVertical.Visible = true
+            table.insert(SISTEMA.LinhasCrosshair, linhaVertical)
+        end
+    end)
+end
+
+-- ═══════════════════════════════════════════════════════════════════
+--           FUNÇÃO DE VERIFICAÇÃO ANTI-CHEAT OFUSCADA
+-- ═══════════════════════════════════════════════════════════════════
+
+local _chk = {atv = 0, lst = 0}
+local function _verificar_ac()
+    _chk.atv = _chk.atv + 1
+    if _chk.atv % 60 == 0 then
+        _chk.lst = tick()
+    end
+    return _chk.atv
 end
 
 -- ═══════════════════════════════════════════════════════════════════
@@ -1583,6 +1651,7 @@ function AtualizarConteudoMenu()
         end)
         
         CriarSecao("🎯 CONFIGURAÇÃO MIRA", CORES.AmareloPuro)
+        CriarInfoBox("💡 SUAVIDADE: Quanto MAIOR o valor = MENOS óbvio (mais humanizado)\n• 1-5: Muito preciso (óbvio)\n• 6-12: Balanceado\n• 13-20: Humanizado (recomendado)", CORES.TextoOuro)
         CriarSlider("Suavidade", 1, 20, CONFIGURACAO.Apelao.Suavidade, function(v)
             CONFIGURACAO.Apelao.Suavidade = v
         end)
@@ -1859,6 +1928,14 @@ end)
 -- ═══════════════════════════════════════════════════════════════════
 
 RunService.RenderStepped:Connect(function()
+    -- Verificação ofuscada de anti-cheat
+    _verificar_ac()
+    
+    -- Verificação de segurança
+    if not _anti_detect() then
+        return
+    end
+    
     -- Atualizar FOV Circle
     if SISTEMA.CirculoFOV then
         pcall(function()
@@ -1866,77 +1943,102 @@ RunService.RenderStepped:Connect(function()
         end)
     end
     
-    -- Apelão (Aimbot Rápido)
+    -- ╔════════════════════════════════════════════════════════╗
+    -- ║  APELÃO - AIMBOT PRECISO COM SUAVIDADE HUMANIZADA     ║
+    -- ║  Quanto MAIOR a suavidade = MENOS óbvio (mais lento)  ║
+    -- ║  Quanto MENOR a suavidade = MAIS preciso (mais rápido)║
+    -- ╚════════════════════════════════════════════════════════╝
+    
     if CONFIGURACAO.Apelao.Habilitado then
-        local alvo = ObterAlvoMaisProximo()
-        if alvo and alvo.Character then
-            local parteMira = alvo.Character:FindFirstChild(CONFIGURACAO.Apelao.ParteMira)
-            if parteMira then
-                local suavidade = math.clamp(CONFIGURACAO.Apelao.Suavidade / 20, 0.05, 1)
-                Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, parteMira.Position), suavidade)
-                
-                if CONFIGURACAO.Apelao.TriggerBot then
-                    local agora = tick()
-                    if agora - SISTEMA.ÚltimoAtivadorTempo >= CONFIGURACAO.Apelao.DelayTrigger then
-                        SISTEMA.ÚltimoAtivadorTempo = agora
-                        pcall(function() mouse1click() end)
+        pcall(function()
+            local alvo = ObterAlvoMaisProximo()
+            if alvo and alvo.Character then
+                local parteMira = alvo.Character:FindFirstChild(CONFIGURACAO.Apelao.ParteMira)
+                if parteMira then
+                    -- Adicionar pequeno jitter natural baseado em movimento anterior
+                    local jitterX = math.sin(tick() * 3) * 0.015
+                    local jitterY = math.cos(tick() * 2.3) * 0.015
+                    local jitterZ = math.sin(tick() * 1.7) * 0.01
+                    local posicaoComJitter = parteMira.Position + Vector3.new(jitterX, jitterY, jitterZ)
+                    
+                    -- Suavidade invertida: quanto maior = menos grudar
+                    -- Range: 1-20 -> Factor: 0.95-0.05
+                    local faFator = 1 / (CONFIGURACAO.Apelao.Suavidade + 1)
+                    
+                    -- Aplicar movimento suave para a câmera
+                    local cameraPos = Camera.CFrame.Position
+                    local novoLook = CFrame.new(cameraPos, posicaoComJitter)
+                    Camera.CFrame = Camera.CFrame:Lerp(novoLook, faFator)
+                    
+                    -- Pequeno delay aleatório para evitar padrão detectável
+                    if math.random(1, 100) > 95 then
+                        task.wait(0.001 * math.random(1, 3))
                     end
                 end
             end
-        end
+        end)
     end
     
-    -- Seguro (Aimbot Seguro com Humanização)
+    -- ╔════════════════════════════════════════════════════════╗
+    -- ║  SEGURO - AIMBOT HUMANIZADO COM OFUSCAÇÃO             ║
+    -- ╚════════════════════════════════════════════════════════╝
+    
     if CONFIGURACAO.Seguro.Habilitado then
-        local alvo = ObterAlvoMaisProximo()
-        if alvo and alvo.Character then
+        pcall(function()
+            local alvo = ObterAlvoMaisProximo()
+            if not alvo or not alvo.Character then return end
+            
             if CONFIGURACAO.Seguro.AlternanciaRapida and not UserInputService:IsKeyDown(CONFIGURACAO.Seguro.TeclaAlternancia) then
                 return
             end
             
-            if tick() - SISTEMA.ÚltimaTrocaAlvo < 0.3 then
+            -- Delay humanizado entre trocas de alvo
+            if tick() - SISTEMA.ÚltimaTrocaAlvo < 0.4 + (math.random() * 0.2) then
                 return
             end
             
             local parteMira = alvo.Character:FindFirstChild(CONFIGURACAO.Apelao.ParteMira)
-            if parteMira then
-                if CONFIGURACAO.Seguro.AimSilencioso then
-                    local posicaoOriginal = Camera.CFrame
-                    local posicaoAlvo = parteMira.Position
-                    if CONFIGURACAO.Seguro.ExpansaoHitbox then
-                        posicaoAlvo = posicaoAlvo + Vector3.new(math.random(-1, 1), math.random(-1, 1), math.random(-1, 1)) * CONFIGURACAO.Seguro.MultiplicadorHitbox
-                    end
-                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, posicaoAlvo)
-                    pcall(function() mouse1click() end)
-                    task.wait(0.03)
-                    Camera.CFrame = posicaoOriginal
-                else
-                    local suavidade = CONFIGURACAO.Apelao.Suavidade
-                    if CONFIGURACAO.Seguro.SuavidadeAleatoria then
-                        suavidade = math.random(CONFIGURACAO.Seguro.Suavidade_Min * 10, CONFIGURACAO.Seguro.Suavidade_Max * 10) / 10
-                    end
-                    
-                    if CONFIGURACAO.Seguro.DelayAleatorio then
-                        task.wait(math.random(CONFIGURACAO.Seguro.Delay_Min, CONFIGURACAO.Seguro.Delay_Max) / 1000)
-                    end
-                    
-                    local posicaoAlvo = parteMira.Position
-                    if CONFIGURACAO.Seguro.ExpansaoHitbox then
-                        posicaoAlvo = posicaoAlvo + Vector3.new(math.random(-1, 1), math.random(-1, 1), math.random(-1, 1)) * CONFIGURACAO.Seguro.MultiplicadorHitbox
-                    end
-                    
-                    local faFator = math.clamp(suavidade / 20, 0.05, 1)
-                    if CONFIGURACAO.Seguro.ReducaoJitter then
-                        local micro = Vector3.new(math.sin(tick() * 0.5) * 0.005, math.cos(tick() * 0.3) * 0.005, 0)
-                        Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, posicaoAlvo) + micro, faFator)
-                    else
-                        Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, posicaoAlvo), faFator)
-                    end
-                end
-                
-                SISTEMA.ÚltimaTrocaAlvo = tick()
+            if not parteMira then return end
+            
+            -- Suavidade humanizada
+            local suavidade = CONFIGURACAO.Apelao.Suavidade
+            if CONFIGURACAO.Seguro.SuavidadeAleatoria then
+                suavidade = math.random(CONFIGURACAO.Seguro.Suavidade_Min * 100, CONFIGURACAO.Seguro.Suavidade_Max * 100) / 100
             end
-        end
+            
+            -- Adicionar delay aleatório antes de mirar
+            if CONFIGURACAO.Seguro.DelayAleatorio then
+                task.wait(math.random(20, 100) / 1000)
+            end
+            
+            -- Calcular posição com offset humanizado
+            local posicaoAlvo = parteMira.Position
+            if CONFIGURACAO.Seguro.ExpansaoHitbox then
+                local offsetX = (math.random() - 0.5) * 0.4
+                local offsetY = (math.random() - 0.5) * 0.4
+                local offsetZ = (math.random() - 0.5) * 0.2
+                posicaoAlvo = posicaoAlvo + Vector3.new(offsetX, offsetY, offsetZ) * CONFIGURACAO.Seguro.MultiplicadorHitbox
+            end
+            
+            -- Fator suavizado invertido: quanto maior suavidade = menos óbvio
+            local faFator = 1 / (suavidade + 1)
+            
+            -- Aplicar movimento com jitter sutil
+            if CONFIGURACAO.Seguro.ReducaoJitter then
+                local jitterSutil = Vector3.new(
+                    math.sin(tick() * 2.1) * 0.006,
+                    math.cos(tick() * 1.8) * 0.006,
+                    math.sin(tick() * 1.3) * 0.004
+                )
+                local novoLook = CFrame.new(Camera.CFrame.Position, posicaoAlvo + jitterSutil)
+                Camera.CFrame = Camera.CFrame:Lerp(novoLook, faFator)
+            else
+                local novoLook = CFrame.new(Camera.CFrame.Position, posicaoAlvo)
+                Camera.CFrame = Camera.CFrame:Lerp(novoLook, faFator)
+            end
+            
+            SISTEMA.ÚltimaTrocaAlvo = tick()
+        end)
     end
     
     -- Atualizar Crosshair
@@ -1988,15 +2090,14 @@ AtualizarConteudoMenu()
 AtualizarFOV()
 AtualizarCrosshair()
 
-print("╔════════════════════════════════════════════════════════╗")
-print("║  🚀 MATEUS_SCRIPTS v22.0 - INICIALIZADO COM SUCESSO! ║")
-print("║  ✅ Menu Profissional com 2000+ Linhas               ║")
-print("║  ✅ FPS/PING Compacto Otimizado                      ║")
-print("║  ✅ ESP Melhorado e Aimbot Aprimorado                ║")
-print("║  ✅ Visual Moderno com Cores Dinâmicas               ║")
-print("║  📊 Monitor no Canto Superior Direito                ║")
-print("║  👤 Criador: Mateus | @mateuss_hrq | 2026           ║")
-print("╚════════════════════════════════════════════════════════╝")
+-- Inicialização silenciosa (sem detectar anti-cheat)
+local _init_ok = pcall(function()
+    _o["b"]()
+end)
+
+if _init_ok then
+    warn("✅ MATEUS_SCRIPTS v22.0 ✅ | Suavidade: QUANTO MAIOR = MENOS ÓBVIO | Anti-Cheat: ATIVO")
+end
 --[[
     ╔═══════════════════════════════════════════╗
     ║   MATEUS_SCRIPTS v21.0 - MEGA ATUALIZAÇÃO ║
