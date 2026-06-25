@@ -198,30 +198,38 @@ end
 -- Monitora mudanças de time de todos os jogadores
 local function MonitorTeamChanges()
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            player:GetPropertyChangedSignal("Team"):Connect(function()
-                TeamCache[player.UserId] = GetPlayerTeam(player)
-                if Config.ESP.Enabled then
-                    UpdateESP()
-                end
-            end)
-            
-            player:GetPropertyChangedSignal("TeamColor"):Connect(function()
-                TeamCache[player.UserId] = GetPlayerTeam(player)
-                if Config.ESP.Enabled then
-                    UpdateESP()
-                end
-            end)
-            
-            player.CharacterAdded:Connect(function()
-                TeamCache[player.UserId] = GetPlayerTeam(player)
-                if Config.ESP.Enabled then
-                    task.wait(0.3)
-                    UpdateESP()
-                end
-            end)
-        end
+        player:GetPropertyChangedSignal("Team"):Connect(function()
+            TeamCache[player.UserId] = GetPlayerTeam(player)
+            if Config.ESP.Enabled then
+                UpdateESP()
+            end
+        end)
+        
+        player:GetPropertyChangedSignal("TeamColor"):Connect(function()
+            TeamCache[player.UserId] = GetPlayerTeam(player)
+            if Config.ESP.Enabled then
+                UpdateESP()
+            end
+        end)
+        
+        player.CharacterAdded:Connect(function()
+            TeamCache[player.UserId] = GetPlayerTeam(player)
+            if Config.ESP.Enabled then
+                task.wait(0.3)
+                UpdateESP()
+            end
+        end)
     end
+
+    -- Atualiza também o jogador local caso o time mude
+    LocalPlayer:GetPropertyChangedSignal("Team"):Connect(function()
+        TeamCache[LocalPlayer.UserId] = GetPlayerTeam(LocalPlayer)
+        if Config.ESP.Enabled then UpdateESP() end
+    end)
+    LocalPlayer:GetPropertyChangedSignal("TeamColor"):Connect(function()
+        TeamCache[LocalPlayer.UserId] = GetPlayerTeam(LocalPlayer)
+        if Config.ESP.Enabled then UpdateESP() end
+    end)
 end
 
 -- ═══════════════════════ GUI - INTERFACE ═══════════════════════
@@ -1033,9 +1041,9 @@ local function CreateStatsDisplay()
     
     MS.StatsContainer = Instance.new("Frame")
     MS.StatsContainer.Name = "StatsContainer"
-    MS.StatsContainer.Size = UDim2.new(0, 150, 0, 46)
-    MS.StatsContainer.Position = UDim2.new(1, -160, 0, 10)
-    MS.StatsContainer.BackgroundColor3 = C.PretoMais
+    MS.StatsContainer.Size = UDim2.new(0, 140, 0, 42)
+    MS.StatsContainer.Position = UDim2.new(1, -150, 0, 10)
+    MS.StatsContainer.BackgroundTransparency = 1
     MS.StatsContainer.BorderSizePixel = 0
     MS.StatsContainer.ZIndex = 1000
     MS.StatsContainer.Parent = ScreenGui
@@ -1047,16 +1055,13 @@ local function CreateStatsDisplay()
     local stroke = Instance.new("UIStroke")
     stroke.Thickness = 1.5
     stroke.Color = C.RoxoBrilhante
-    stroke.Transparency = 0.4
+    stroke.Transparency = 1
     stroke.Parent = MS.StatsContainer
     
     -- Ícone FPS
     local fpsIcon = Instance.new("TextLabel")
-    fpsIcon.Size = UDim2.new(0, 12, 0, 12)
-    fpsIcon.Position = UDim2.new(0, 8, 0, 8)
-    fpsIcon.BackgroundColor3 = C.Verde
-    fpsIcon.BorderSizePixel = 0
-    fpsIcon.Text = ""
+    fpsIcon.Size = UDim2.new(0, 0, 0, 0)
+    fpsIcon.BackgroundTransparency = 1
     fpsIcon.ZIndex = 1001
     fpsIcon.Parent = MS.StatsContainer
     
@@ -1066,8 +1071,8 @@ local function CreateStatsDisplay()
     
     -- Texto FPS
     MS.FPSLabel = Instance.new("TextLabel")
-    MS.FPSLabel.Size = UDim2.new(0, 104, 0, 14)
-    MS.FPSLabel.Position = UDim2.new(0, 24, 0, 6)
+    MS.FPSLabel.Size = UDim2.new(0, 130, 0, 16)
+    MS.FPSLabel.Position = UDim2.new(0, 0, 0, 8)
     MS.FPSLabel.BackgroundTransparency = 1
     MS.FPSLabel.Text = "FPS: --"
     MS.FPSLabel.TextColor3 = C.Verde
@@ -1079,11 +1084,8 @@ local function CreateStatsDisplay()
     
     -- Ícone PING
     local pingIcon = Instance.new("TextLabel")
-    pingIcon.Size = UDim2.new(0, 12, 0, 12)
-    pingIcon.Position = UDim2.new(0, 8, 0, 28)
-    pingIcon.BackgroundColor3 = C.Azul
-    pingIcon.BorderSizePixel = 0
-    pingIcon.Text = ""
+    pingIcon.Size = UDim2.new(0, 0, 0, 0)
+    pingIcon.BackgroundTransparency = 1
     pingIcon.ZIndex = 1001
     pingIcon.Parent = MS.StatsContainer
     
@@ -1093,8 +1095,8 @@ local function CreateStatsDisplay()
     
     -- Texto PING
     MS.PingLabel = Instance.new("TextLabel")
-    MS.PingLabel.Size = UDim2.new(0, 118, 0, 14)
-    MS.PingLabel.Position = UDim2.new(0, 24, 0, 26)
+    MS.PingLabel.Size = UDim2.new(0, 130, 0, 16)
+    MS.PingLabel.Position = UDim2.new(0, 0, 0, 24)
     MS.PingLabel.BackgroundTransparency = 1
     MS.PingLabel.Text = "PING: --"
     MS.PingLabel.TextColor3 = C.Azul
@@ -1104,29 +1106,9 @@ local function CreateStatsDisplay()
     MS.PingLabel.ZIndex = 1001
     MS.PingLabel.Parent = MS.StatsContainer
     
-    -- Atualizar FPS e PING em tempo real
-    coroutine.wrap(function()
-        local lastTick = tick()
+    -- Atualizar PING em tempo real
+    task.spawn(function()
         while MS.StatsContainer and MS.StatsContainer.Parent do
-            local now = tick()
-            local dt = now - lastTick
-            lastTick = now
-            if dt <= 0 then dt = 0.033 end
-            local fps = math.floor(1 / dt)
-            MS.CurrentFPS = fps
-            
-            if MS.FPSLabel then
-                MS.FPSLabel.Text = "FPS: " .. fps
-                if fps >= 60 then
-                    MS.FPSLabel.TextColor3 = C.Verde
-                elseif fps >= 30 then
-                    MS.FPSLabel.TextColor3 = C.Amarelo
-                else
-                    MS.FPSLabel.TextColor3 = C.Vermelho
-                end
-            end
-            
-            -- PING
             pcall(function()
                 local ping = math.floor(Stats.PerformanceStats.Ping:GetValue() * 1000)
                 MS.CurrentPing = ping
@@ -1143,27 +1125,7 @@ local function CreateStatsDisplay()
             end)
             task.wait(0.15)
         end
-    end)()
-end
-
--- ═══════════════════════ SISTEMAS DE JOGO ═══════════════════════
-
--- Atualizar ESP
-local function UpdateESP()
-    for _, v in pairs(MS.ESP_Objects) do
-        pcall(function() v:Destroy() end)
-    end
-    for _, v in pairs(MS.ESP_Tracers) do
-        pcall(function() v:Remove() end)
-    end
-    MS.ESP_Objects = {}
-    MS.ESP_Tracers = {}
-    
-    if not Config.ESP.Enabled then return end
-    
-    UpdateTeamCache()
-    
-    local myChar = LocalPlayer.Character
+    end myChar = LocalPlayer.Character
     if not myChar then return end
     local myRoot = myChar:FindFirstChild("HumanoidRootPart")
     if not myRoot then return end
@@ -1614,10 +1576,44 @@ end
 
 -- ═══════════════════════ LOOP PRINCIPAL ═══════════════════════
 RunService.RenderStepped:Connect(function()
+    -- Atualizar FPS em tempo real
+    if MS.FPSLabel then
+        local now = tick()
+        local dt = math.max(now - (MS.LastFrameTick or now), 0.0001)
+        MS.LastFrameTick = now
+        local fps = math.floor(1 / dt)
+        MS.CurrentFPS = fps
+        MS.FPSLabel.Text = "FPS: " .. fps
+        if fps >= 60 then
+            MS.FPSLabel.TextColor3 = C.Verde
+        elseif fps >= 30 then
+            MS.FPSLabel.TextColor3 = C.Amarelo
+        else
+            MS.FPSLabel.TextColor3 = C.Vermelho
+        end
+    end
+
     -- Atualizar FOV Circle
     if MS.FOV_Circle then
         pcall(function()
-            MS.FOV_Circle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+            MS.FOVPS em tempo real
+    if MS.FPSLabel then
+        local now = tick()
+        local dt = math.max(now - (MS.LastFrameTick or now), 0.0001)
+        MS.LastFrameTick = now
+        local fps = math.floor(1 / dt)
+        MS.CurrentFPS = fps
+        MS.FPSLabel.Text = "FPS: " .. fps
+        if fps >= 60 then
+            MS.FPSLabel.TextColor3 = C.Verde
+        elseif fps >= 30 then
+            MS.FPSLabel.TextColor3 = C.Amarelo
+        else
+            MS.FPSLabel.TextColor3 = C.Vermelho
+        end
+    end
+
+    -- Atualizar F_Circle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
         end)
     end
     
@@ -1729,6 +1725,15 @@ CreateStatsDisplay()
 UpdateContent()
 UpdateFOV()
 UpdateCrosshair()
+
+task.spawn(function()
+    while true do
+        if Config.ESP.Enabled then
+            UpdateESP()
+        end
+        task.wait(0.15)
+    end
+end)
 
 -- Logs de inicialização
 print("╔════════════════════════════════════════════╗")
