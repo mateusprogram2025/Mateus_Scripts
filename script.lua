@@ -251,7 +251,7 @@ Icon.TextColor3 = C.RoxoNeon
 Icon.Font = Enum.Font.GothamBlack
 Icon.TextSize = 20
 Icon.Visible = false
-Icon.ZIndex = 10
+Icon.ZIndex = 1000
 Icon.AutoButtonColor = false
 Icon.Parent = ScreenGui
 
@@ -272,7 +272,7 @@ Main.Position = UDim2.new(0.5, -260, 0.5, -210)
 Main.BackgroundColor3 = C.PretoMais
 Main.BorderSizePixel = 0
 Main.Visible = true
-Main.ZIndex = 5
+Main.ZIndex = 1000
 Main.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
@@ -292,6 +292,7 @@ Header.BackgroundColor3 = C.Roxo
 Header.BackgroundTransparency = 0.15
 Header.BorderSizePixel = 0
 Header.ZIndex = 6
+Header.Active = true
 Header.Parent = Main
 
 local HeaderCorner = Instance.new("UICorner")
@@ -961,8 +962,9 @@ local function Button(text, color, cb)
 end
 
 -- ═══════════════════════ ARRASTAR O MENU ═══════════════════════
+Header.Active = true
 Header.InputBegan:Connect(function(inp)
-    if inp.UserInputType == Enum.UserInputType.Touch then
+    if inp.UserInputType == Enum.UserInputType.Touch or inp.UserInputType == Enum.UserInputType.MouseButton1 then
         MS.Dragging = true
         MS.DragStart = inp.Position
         MS.StartPos = Main.Position
@@ -970,19 +972,22 @@ Header.InputBegan:Connect(function(inp)
 end)
 
 UserInputService.InputChanged:Connect(function(inp)
-    if MS.Dragging then
+    if MS.Dragging and (inp.UserInputType == Enum.UserInputType.Touch or inp.UserInputType == Enum.UserInputType.MouseMovement) then
         local d = inp.Position - MS.DragStart
         Main.Position = UDim2.new(MS.StartPos.X.Scale, MS.StartPos.X.Offset + d.X, MS.StartPos.Y.Scale, MS.StartPos.Y.Offset + d.Y)
     end
 end)
 
 UserInputService.InputEnded:Connect(function(inp)
-    if inp.UserInputType == Enum.UserInputType.Touch then MS.Dragging = false end
+    if inp.UserInputType == Enum.UserInputType.Touch or inp.UserInputType == Enum.UserInputType.MouseButton1 then
+        MS.Dragging = false
+    end
 end)
 
 -- Arrastar ícone
+Icon.Active = true
 Icon.InputBegan:Connect(function(inp)
-    if inp.UserInputType == Enum.UserInputType.Touch then
+    if inp.UserInputType == Enum.UserInputType.Touch or inp.UserInputType == Enum.UserInputType.MouseButton1 then
         MS.IconDragging = true
         MS.IconMoved = false
         MS.IconDragStart = inp.Position
@@ -991,7 +996,7 @@ Icon.InputBegan:Connect(function(inp)
 end)
 
 Icon.InputChanged:Connect(function(inp)
-    if MS.IconDragging and inp.UserInputType == Enum.UserInputType.Touch then
+    if MS.IconDragging and (inp.UserInputType == Enum.UserInputType.Touch or inp.UserInputType == Enum.UserInputType.MouseMovement) then
         local d = inp.Position - MS.IconDragStart
         if math.abs(d.X) > 5 or math.abs(d.Y) > 5 then MS.IconMoved = true end
         Icon.Position = UDim2.new(MS.IconStartPos.X.Scale, MS.IconStartPos.X.Offset + d.X, MS.IconStartPos.Y.Scale, MS.IconStartPos.Y.Offset + d.Y)
@@ -999,7 +1004,7 @@ Icon.InputChanged:Connect(function(inp)
 end)
 
 Icon.InputEnded:Connect(function(inp)
-    if inp.UserInputType == Enum.UserInputType.Touch then
+    if inp.UserInputType == Enum.UserInputType.Touch or inp.UserInputType == Enum.UserInputType.MouseButton1 then
         if not MS.IconMoved then
             Main.Visible = true
             Icon.Visible = false
@@ -1058,17 +1063,6 @@ local function CreateStatsDisplay()
     stroke.Transparency = 1
     stroke.Parent = MS.StatsContainer
     
-    -- Ícone FPS
-    local fpsIcon = Instance.new("TextLabel")
-    fpsIcon.Size = UDim2.new(0, 0, 0, 0)
-    fpsIcon.BackgroundTransparency = 1
-    fpsIcon.ZIndex = 1001
-    fpsIcon.Parent = MS.StatsContainer
-    
-    local fpsIconCorner = Instance.new("UICorner")
-    fpsIconCorner.CornerRadius = UDim.new(1, 0)
-    fpsIconCorner.Parent = fpsIcon
-    
     -- Texto FPS
     MS.FPSLabel = Instance.new("TextLabel")
     MS.FPSLabel.Size = UDim2.new(0, 130, 0, 16)
@@ -1081,17 +1075,6 @@ local function CreateStatsDisplay()
     MS.FPSLabel.TextXAlignment = Enum.TextXAlignment.Left
     MS.FPSLabel.ZIndex = 1001
     MS.FPSLabel.Parent = MS.StatsContainer
-    
-    -- Ícone PING
-    local pingIcon = Instance.new("TextLabel")
-    pingIcon.Size = UDim2.new(0, 0, 0, 0)
-    pingIcon.BackgroundTransparency = 1
-    pingIcon.ZIndex = 1001
-    pingIcon.Parent = MS.StatsContainer
-    
-    local pingIconCorner = Instance.new("UICorner")
-    pingIconCorner.CornerRadius = UDim.new(1, 0)
-    pingIconCorner.Parent = pingIcon
     
     -- Texto PING
     MS.PingLabel = Instance.new("TextLabel")
@@ -1125,33 +1108,62 @@ local function CreateStatsDisplay()
             end)
             task.wait(0.15)
         end
-    end myChar = LocalPlayer.Character
-    if not myChar then return end
+    end)
+end
+
+local function UpdateESP()
+    for _, v in pairs(MS.ESP_Objects) do
+        pcall(function() v:Destroy() end)
+    end
+    MS.ESP_Objects = {}
+
+    if not Config.ESP.Enabled then
+        return
+    end
+
+    UpdateTeamCache()
+
+    local myChar = LocalPlayer.Character
+    if not myChar then
+        return
+    end
+
     local myRoot = myChar:FindFirstChild("HumanoidRootPart")
-    if not myRoot then return end
-    
+    if not myRoot then
+        return
+    end
+
     for _, player in pairs(Players:GetPlayers()) do
-        if player == LocalPlayer then continue end
+        if player == LocalPlayer then
+            continue
+        end
+
         local char = player.Character
-        if not char then continue end
-        
+        if not char then
+            continue
+        end
+
         local hum = char:FindFirstChild("Humanoid")
         local head = char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
         local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("LowerTorso")
-        
-        if not hum or hum.Health <= 0 or not root or not head then continue end
-        
+
+        if not hum or hum.Health <= 0 or not root or not head then
+            continue
+        end
+
         local dist = (myRoot.Position - root.Position).Magnitude
-        if dist > Config.ESP.MaxDistance then continue end
-        
+        if dist > Config.ESP.MaxDistance then
+            continue
+        end
+
         local isTeam = false
         if Config.ESP.TeamCheck then
             isTeam = IsSameTeam(player, LocalPlayer)
         end
-        
+
         local boxColor = isTeam and Config.ESP.TeamBoxColor or Config.ESP.BoxColor
         local nameColor = isTeam and Config.ESP.TeamNameColor or Config.ESP.NameColor
-        
+
         if Config.ESP.Boxes then
             local hl = Instance.new("Highlight")
             hl.FillColor = boxColor
@@ -1163,7 +1175,7 @@ local function CreateStatsDisplay()
             hl.Parent = ScreenGui
             table.insert(MS.ESP_Objects, hl)
         end
-        
+
         if Config.ESP.Names or Config.ESP.HealthBar or Config.ESP.Distance then
             local bill = Instance.new("BillboardGui")
             bill.Size = UDim2.new(0, 150, 0, 50)
@@ -1173,7 +1185,7 @@ local function CreateStatsDisplay()
             bill.ClipsDescendants = true
             bill.Parent = head
             table.insert(MS.ESP_Objects, bill)
-            
+
             local y = 0
             if Config.ESP.Names then
                 local nl = Instance.new("TextLabel")
@@ -1188,7 +1200,7 @@ local function CreateStatsDisplay()
                 nl.Parent = bill
                 y = y + 17
             end
-            
+
             if Config.ESP.HealthBar then
                 local healthPercent = math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
                 local bar = Instance.new("Frame")
@@ -1197,13 +1209,13 @@ local function CreateStatsDisplay()
                 bar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
                 bar.BorderSizePixel = 0
                 bar.Parent = bill
-                
+
                 local fill = Instance.new("Frame")
                 fill.Size = UDim2.new(healthPercent, 0, 1, 0)
                 fill.BackgroundColor3 = healthPercent > 0.6 and Color3.fromRGB(0, 220, 40) or (healthPercent > 0.3 and Color3.fromRGB(255, 210, 0) or Color3.fromRGB(255, 75, 75))
                 fill.BorderSizePixel = 0
                 fill.Parent = bar
-                
+
                 local healthText = Instance.new("TextLabel")
                 healthText.Size = UDim2.new(1, 0, 0, 12)
                 healthText.Position = UDim2.new(0, 0, 0, 8)
@@ -1216,7 +1228,7 @@ local function CreateStatsDisplay()
                 healthText.Parent = bill
                 y = y + 18
             end
-            
+
             if Config.ESP.Distance then
                 local dl = Instance.new("TextLabel")
                 dl.Size = UDim2.new(1, 0, 0, 14)
@@ -1596,27 +1608,10 @@ RunService.RenderStepped:Connect(function()
     -- Atualizar FOV Circle
     if MS.FOV_Circle then
         pcall(function()
-            MS.FOVPS em tempo real
-    if MS.FPSLabel then
-        local now = tick()
-        local dt = math.max(now - (MS.LastFrameTick or now), 0.0001)
-        MS.LastFrameTick = now
-        local fps = math.floor(1 / dt)
-        MS.CurrentFPS = fps
-        MS.FPSLabel.Text = "FPS: " .. fps
-        if fps >= 60 then
-            MS.FPSLabel.TextColor3 = C.Verde
-        elseif fps >= 30 then
-            MS.FPSLabel.TextColor3 = C.Amarelo
-        else
-            MS.FPSLabel.TextColor3 = C.Vermelho
-        end
-    end
-
-    -- Atualizar F_Circle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+            MS.FOV_Circle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
         end)
     end
-    
+
     -- Apelão
     if Config.Apelao.Enabled then
         local target = GetClosestTarget()
