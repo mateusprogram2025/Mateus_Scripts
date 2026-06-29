@@ -1,12 +1,16 @@
 --[[
     ╔═══════════════════════════════════════════════════════╗
-    ║   MATEUS_SCRIPTS v22.0 - VERSÃO OTIMIZADA            ║
-    ║  • Salvamento Funcional • Visual Limpo               ║
-    ║  • Branco/Preto com Transparência                    ║
-    ║  • Código Otimizado • Sem Erros                      ║
+    ║   MATEUS_SCRIPTS v22.0 - COMPLETO E FUNCIONAL        ║
+    ║  • Visual Branco/Preto com Transparência             ║
+    ║  • Logo Arrastável ao Minimizar                      ║
+    ║  • Box ESP com Cores Personalizáveis                 ║
+    ║  • FOV Circle Funcional                              ║
+    ║  • Salvamento em JSON Funcionando                    ║
+    ║  • Tecla Personalizável para Abrir/Fechar            ║
     ╚═══════════════════════════════════════════════════════╝
 ]]
 
+-- ═══════════════════════ SERVIÇOS ═══════════════════════
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -14,6 +18,7 @@ local Lighting = game:GetService("Lighting")
 local Stats = game:GetService("Stats")
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -31,6 +36,10 @@ local C = {
     PretoMedio = Color3.fromRGB(30, 30, 35),
     PretoFundo = Color3.fromRGB(15, 15, 18),
     
+    -- Cores padrão para ESP
+    Inimigo = Color3.fromRGB(255, 50, 50),
+    Aliado = Color3.fromRGB(50, 150, 255),
+    
     -- Cores de status
     Verde = Color3.fromRGB(0, 200, 80),
     Vermelho = Color3.fromRGB(255, 60, 60),
@@ -45,9 +54,16 @@ local Config = {
     ESP = {
         Enabled = false,
         Boxes = true,
+        BoxColor = C.Inimigo,
+        TeamBoxColor = C.Aliado,
         Names = true,
+        NameColor = C.Branco,
+        TeamNameColor = C.Azul,
         HealthBar = true,
         Distance = true,
+        DistanceColor = C.CinzaClaro,
+        Tracers = false,
+        TracerColor = C.Branco,
         TeamCheck = true,
         MaxDistance = 1500,
     },
@@ -55,6 +71,8 @@ local Config = {
     Aimbot = {
         Enabled = false,
         FOV = 130,
+        FOVColor = C.Branco,
+        ShowFOV = true,
         Smoothness = 3,
         AimPart = "Head",
         TeamCheck = true,
@@ -68,6 +86,7 @@ local Config = {
         FOVValue = 70,
         Crosshair = false,
         CrosshairSize = 15,
+        CrosshairColor = C.Branco,
     },
     
     Monitor = {
@@ -79,7 +98,6 @@ local Config = {
 
 -- ═══════════════════════ SISTEMA DE SALVAMENTO ═══════════════════════
 local SaveSystem = {
-    Data = {},
     FileName = "MateusConfig_" .. LocalPlayer.UserId .. ".json"
 }
 
@@ -88,21 +106,18 @@ function SaveSystem:Load()
         return readfile(self.FileName)
     end)
     
-    if success and data then
-        local decoded = HttpService:JSONDecode(data)
-        if decoded then
-            self.Data = decoded
-            -- Aplicar configurações salvas
-            for key, value in pairs(self.Data) do
-                if Config[key] ~= nil then
-                    if type(value) == "table" and type(Config[key]) == "table" then
-                        for subKey, subValue in pairs(value) do
-                            if Config[key][subKey] ~= nil then
-                                Config[key][subKey] = subValue
-                            end
+    if success and data and data ~= "" then
+        local success2, decoded = pcall(function()
+            return HttpService:JSONDecode(data)
+        end)
+        
+        if success2 and decoded then
+            for category, values in pairs(decoded) do
+                if Config[category] then
+                    for key, value in pairs(values) do
+                        if Config[category][key] ~= nil then
+                            Config[category][key] = value
                         end
-                    else
-                        Config[key] = value
                     end
                 end
             end
@@ -115,9 +130,14 @@ end
 function SaveSystem:Save()
     local dataToSave = {}
     
-    for key, value in pairs(Config) do
-        if type(value) ~= "function" then
-            dataToSave[key] = value
+    for category, values in pairs(Config) do
+        if type(values) == "table" then
+            dataToSave[category] = {}
+            for key, value in pairs(values) do
+                if type(value) ~= "function" and type(value) ~= "userdata" then
+                    dataToSave[category][key] = value
+                end
+            end
         end
     end
     
@@ -129,11 +149,11 @@ function SaveSystem:Save()
 end
 
 function SaveSystem:Reset()
-    -- Resetar para padrão
     Config.ESP.Enabled = false
     Config.Aimbot.Enabled = false
     Config.Visuals.FullBright = false
     Config.Monitor.Enabled = true
+    Config.MenuKey = Enum.KeyCode.RightShift
     self:Save()
 end
 
@@ -144,12 +164,82 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
+-- ═══════════════════════ LOGO ARRASTÁVEL (Quando minimizado) ═══════════════════════
+local Logo = Instance.new("ImageButton")
+Logo.Size = UDim2.new(0, 60, 0, 60)
+Logo.Position = UDim2.new(0.5, -30, 0.5, -30)
+Logo.BackgroundColor3 = C.PretoFundo
+Logo.BackgroundTransparency = 0.2
+Logo.Image = "rbxassetid://0" -- Placeholder, você pode colocar sua própria imagem
+Logo.ImageTransparency = 1
+Logo.Visible = false
+Logo.ZIndex = 1000
+Logo.Parent = ScreenGui
+
+-- Arredondar logo
+local LogoCorner = Instance.new("UICorner")
+LogoCorner.CornerRadius = UDim.new(0, 30)
+LogoCorner.Parent = Logo
+
+-- Borda da logo
+local LogoStroke = Instance.new("UIStroke")
+LogoStroke.Thickness = 2
+LogoStroke.Color = C.Branco
+LogoStroke.Transparency = 0.5
+LogoStroke.Parent = Logo
+
+-- Texto da logo (já que não tem imagem)
+local LogoText = Instance.new("TextLabel")
+LogoText.Size = UDim2.new(1, 0, 1, 0)
+LogoText.BackgroundTransparency = 1
+LogoText.Text = "⚙"
+LogoText.TextColor3 = C.Branco
+LogoText.Font = Enum.Font.GothamBold
+LogoText.TextSize = 30
+LogoText.ZIndex = 1001
+LogoText.Parent = Logo
+
+-- Sistema de arrasto da logo
+local LogoDragging = false
+local LogoDragStart = nil
+local LogoStartPos = nil
+
+Logo.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        LogoDragging = true
+        LogoDragStart = input.Position
+        LogoStartPos = Logo.Position
+    end
+end)
+
+Logo.InputChanged:Connect(function(input)
+    if LogoDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - LogoDragStart
+        Logo.Position = UDim2.new(
+            LogoStartPos.X.Scale, LogoStartPos.X.Offset + delta.X,
+            LogoStartPos.Y.Scale, LogoStartPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        LogoDragging = false
+    end
+end)
+
+-- Clicar na logo abre o menu
+Logo.MouseButton1Click:Connect(function()
+    Main.Visible = true
+    Logo.Visible = false
+end)
+
 -- ═══════════════════════ MENU PRINCIPAL ═══════════════════════
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 500, 0, 400)
-Main.Position = UDim2.new(0.5, -250, 0.5, -200)
+Main.Size = UDim2.new(0, 550, 0, 450)
+Main.Position = UDim2.new(0.5, -275, 0.5, -225)
 Main.BackgroundColor3 = C.PretoFundo
-Main.BackgroundTransparency = 0.1
+Main.BackgroundTransparency = 0.15
 Main.BorderSizePixel = 0
 Main.Visible = true
 Main.ZIndex = 1000
@@ -157,33 +247,33 @@ Main.Parent = ScreenGui
 
 -- Cantos arredondados
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.CornerRadius = UDim.new(0, 15)
 MainCorner.Parent = Main
 
 -- Borda sutil
 local MainStroke = Instance.new("UIStroke")
-MainStroke.Thickness = 1
+MainStroke.Thickness = 1.5
 MainStroke.Color = C.Branco
-MainStroke.Transparency = 0.8
+MainStroke.Transparency = 0.85
 MainStroke.Parent = Main
 
 -- ═══════════════════════ HEADER ═══════════════════════
 local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 45)
+Header.Size = UDim2.new(1, 0, 0, 50)
 Header.BackgroundColor3 = C.PretoClaro
-Header.BackgroundTransparency = 0.2
+Header.BackgroundTransparency = 0.3
 Header.BorderSizePixel = 0
 Header.ZIndex = 6
 Header.Parent = Main
 
 local HeaderCorner = Instance.new("UICorner")
-HeaderCorner.CornerRadius = UDim.new(0, 12)
+HeaderCorner.CornerRadius = UDim.new(0, 15)
 HeaderCorner.Parent = Header
 
 -- Título
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0, 250, 0, 22)
-Title.Position = UDim2.new(0, 15, 0, 5)
+Title.Position = UDim2.new(0, 15, 0, 6)
 Title.BackgroundTransparency = 1
 Title.Text = "⚙ CONFIGURAÇÕES"
 Title.TextColor3 = C.Branco
@@ -196,9 +286,9 @@ Title.Parent = Header
 -- Subtítulo
 local SubTitle = Instance.new("TextLabel")
 SubTitle.Size = UDim2.new(0, 250, 0, 15)
-SubTitle.Position = UDim2.new(0, 15, 0, 26)
+SubTitle.Position = UDim2.new(0, 15, 0, 28)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "Menu Profissional • Otimizado"
+SubTitle.Text = "Menu Completo • Profissional"
 SubTitle.TextColor3 = C.Cinza
 SubTitle.Font = Enum.Font.Gotham
 SubTitle.TextSize = 10
@@ -206,64 +296,68 @@ SubTitle.TextXAlignment = Enum.TextXAlignment.Left
 SubTitle.ZIndex = 7
 SubTitle.Parent = Header
 
--- Botão Minimizar
+-- Botão Minimizar (vai para logo)
 local MinBtn = Instance.new("TextButton")
-MinBtn.Size = UDim2.new(0, 25, 0, 25)
-MinBtn.Position = UDim2.new(1, -60, 0, 10)
+MinBtn.Size = UDim2.new(0, 28, 0, 28)
+MinBtn.Position = UDim2.new(1, -66, 0, 11)
 MinBtn.BackgroundColor3 = C.CinzaEscuro
-MinBtn.BackgroundTransparency = 0.3
+MinBtn.BackgroundTransparency = 0.4
 MinBtn.BorderSizePixel = 0
 MinBtn.Text = "─"
 MinBtn.TextColor3 = C.Branco
 MinBtn.Font = Enum.Font.GothamBold
-MinBtn.TextSize = 16
+MinBtn.TextSize = 18
 MinBtn.ZIndex = 7
 MinBtn.Parent = Header
 
 local MinCorner = Instance.new("UICorner")
-MinCorner.CornerRadius = UDim.new(0, 5)
+MinCorner.CornerRadius = UDim.new(0, 6)
 MinCorner.Parent = MinBtn
 
 -- Botão Fechar
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 25, 0, 25)
-CloseBtn.Position = UDim2.new(1, -30, 0, 10)
+CloseBtn.Size = UDim2.new(0, 28, 0, 28)
+CloseBtn.Position = UDim2.new(1, -32, 0, 11)
 CloseBtn.BackgroundColor3 = C.Vermelho
-CloseBtn.BackgroundTransparency = 0.3
+CloseBtn.BackgroundTransparency = 0.4
 CloseBtn.BorderSizePixel = 0
 CloseBtn.Text = "✕"
 CloseBtn.TextColor3 = C.Branco
 CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 12
+CloseBtn.TextSize = 14
 CloseBtn.ZIndex = 7
 CloseBtn.Parent = Header
 
 local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 5)
+CloseCorner.CornerRadius = UDim.new(0, 6)
 CloseCorner.Parent = CloseBtn
 
 -- ═══════════════════════ SIDEBAR ═══════════════════════
 local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 110, 1, -55)
-Sidebar.Position = UDim2.new(0, 0, 0, 45)
+Sidebar.Size = UDim2.new(0, 120, 1, -60)
+Sidebar.Position = UDim2.new(0, 0, 0, 50)
 Sidebar.BackgroundColor3 = C.PretoClaro
-Sidebar.BackgroundTransparency = 0.3
+Sidebar.BackgroundTransparency = 0.4
 Sidebar.BorderSizePixel = 0
 Sidebar.ZIndex = 5
 Sidebar.Parent = Main
 
+local SidebarCorner = Instance.new("UICorner")
+SidebarCorner.CornerRadius = UDim.new(0, 10)
+SidebarCorner.Parent = Sidebar
+
 -- ═══════════════════════ CONTEÚDO ═══════════════════════
 local Content = Instance.new("Frame")
-Content.Size = UDim2.new(1, -120, 1, -55)
-Content.Position = UDim2.new(0, 115, 0, 50)
+Content.Size = UDim2.new(1, -130, 1, -60)
+Content.Position = UDim2.new(0, 125, 0, 55)
 Content.BackgroundColor3 = C.PretoMedio
-Content.BackgroundTransparency = 0.4
+Content.BackgroundTransparency = 0.5
 Content.BorderSizePixel = 0
 Content.ZIndex = 5
 Content.Parent = Main
 
 local ContentCorner = Instance.new("UICorner")
-ContentCorner.CornerRadius = UDim.new(0, 8)
+ContentCorner.CornerRadius = UDim.new(0, 10)
 ContentCorner.Parent = Content
 
 local Scroll = Instance.new("ScrollingFrame")
@@ -271,15 +365,15 @@ Scroll.Size = UDim2.new(1, -10, 1, -10)
 Scroll.Position = UDim2.new(0, 5, 0, 5)
 Scroll.BackgroundTransparency = 1
 Scroll.BorderSizePixel = 0
-Scroll.ScrollBarThickness = 2
+Scroll.ScrollBarThickness = 3
 Scroll.ScrollBarImageColor3 = C.Branco
-Scroll.ScrollBarImageTransparency = 0.7
+Scroll.ScrollBarImageTransparency = 0.8
 Scroll.CanvasSize = UDim2.new(0, 0, 0, 10)
 Scroll.ZIndex = 6
 Scroll.Parent = Content
 
 local ScrollList = Instance.new("UIListLayout")
-ScrollList.Padding = UDim.new(0, 4)
+ScrollList.Padding = UDim.new(0, 5)
 ScrollList.SortOrder = Enum.SortOrder.LayoutOrder
 ScrollList.Parent = Scroll
 
@@ -296,27 +390,27 @@ local Tabs = {
 local CurrentTab = "Geral"
 local TabButtons = {}
 
--- Criar botões de abas
+-- Layout da sidebar
 local SidebarList = Instance.new("UIListLayout")
-SidebarList.Padding = UDim.new(0, 3)
+SidebarList.Padding = UDim.new(0, 4)
 SidebarList.SortOrder = Enum.SortOrder.LayoutOrder
 SidebarList.Parent = Sidebar
 
 -- Espaçamento inicial
 local SidePad = Instance.new("Frame")
-SidePad.Size = UDim2.new(1, 0, 0, 5)
+SidePad.Size = UDim2.new(1, 0, 0, 8)
 SidePad.BackgroundTransparency = 1
 SidePad.LayoutOrder = 0
 SidePad.Parent = Sidebar
 
 for i, tab in ipairs(Tabs) do
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -8, 0, 30)
-    btn.Position = UDim2.new(0, 4, 0, 0)
+    btn.Size = UDim2.new(1, -10, 0, 34)
+    btn.Position = UDim2.new(0, 5, 0, 0)
     btn.BackgroundColor3 = C.PretoMedio
-    btn.BackgroundTransparency = 0.5
+    btn.BackgroundTransparency = 0.6
     btn.BorderSizePixel = 0
-    btn.Text = tab.Icon .. " " .. tab.Name
+    btn.Text = tab.Icon .. "  " .. tab.Name
     btn.TextColor3 = C.Cinza
     btn.Font = Enum.Font.Gotham
     btn.TextSize = 11
@@ -326,7 +420,7 @@ for i, tab in ipairs(Tabs) do
     btn.Parent = Sidebar
     
     local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.CornerRadius = UDim.new(0, 8)
     btnCorner.Parent = btn
     
     btn.MouseButton1Click:Connect(function()
@@ -342,11 +436,11 @@ function UpdateTabStyles()
     for name, btn in pairs(TabButtons) do
         if name == CurrentTab then
             btn.BackgroundColor3 = C.Branco
-            btn.BackgroundTransparency = 0.8
+            btn.BackgroundTransparency = 0.85
             btn.TextColor3 = C.Branco
         else
             btn.BackgroundColor3 = C.PretoMedio
-            btn.BackgroundTransparency = 0.5
+            btn.BackgroundTransparency = 0.6
             btn.TextColor3 = C.Cinza
         end
     end
@@ -366,8 +460,13 @@ function ClearScroll()
 end
 
 function Section(text)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 22)
+    frame.BackgroundTransparency = 1
+    frame.Parent = Scroll
+    
     local l = Instance.new("TextLabel")
-    l.Size = UDim2.new(1, 0, 0, 20)
+    l.Size = UDim2.new(1, 0, 1, 0)
     l.BackgroundTransparency = 1
     l.Text = text
     l.TextColor3 = C.Branco
@@ -375,36 +474,36 @@ function Section(text)
     l.TextSize = 12
     l.TextXAlignment = Enum.TextXAlignment.Left
     l.ZIndex = 6
-    l.Parent = Scroll
+    l.Parent = frame
     
     local line = Instance.new("Frame")
     line.Size = UDim2.new(1, 0, 0, 1)
-    line.Position = UDim2.new(0, 0, 0, 18)
+    line.Position = UDim2.new(0, 0, 1, -1)
     line.BackgroundColor3 = C.Branco
-    line.BackgroundTransparency = 0.8
+    line.BackgroundTransparency = 0.85
     line.BorderSizePixel = 0
-    line.Parent = l
+    line.Parent = frame
     
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 22)
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 24)
     return l
 end
 
 function Toggle(text, default, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 30)
+    frame.Size = UDim2.new(1, 0, 0, 32)
     frame.BackgroundColor3 = C.PretoMedio
-    frame.BackgroundTransparency = 0.6
+    frame.BackgroundTransparency = 0.7
     frame.BorderSizePixel = 0
     frame.ZIndex = 6
     frame.Parent = Scroll
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
+    corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = frame
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 180, 1, 0)
-    label.Position = UDim2.new(0, 8, 0, 0)
+    label.Size = UDim2.new(0, 200, 1, 0)
+    label.Position = UDim2.new(0, 10, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = C.BrancoSuave
@@ -415,8 +514,8 @@ function Toggle(text, default, callback)
     label.Parent = frame
     
     local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, 40, 0, 20)
-    toggleBtn.Position = UDim2.new(1, -46, 0.5, -10)
+    toggleBtn.Size = UDim2.new(0, 42, 0, 22)
+    toggleBtn.Position = UDim2.new(1, -50, 0.5, -11)
     toggleBtn.BackgroundColor3 = default and C.Verde or C.CinzaEscuro
     toggleBtn.BorderSizePixel = 0
     toggleBtn.Text = ""
@@ -428,8 +527,8 @@ function Toggle(text, default, callback)
     btnCorner.Parent = toggleBtn
     
     local dot = Instance.new("Frame")
-    dot.Size = UDim2.new(0, 16, 0, 16)
-    dot.Position = default and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+    dot.Size = UDim2.new(0, 18, 0, 18)
+    dot.Position = default and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
     dot.BackgroundColor3 = C.Branco
     dot.BorderSizePixel = 0
     dot.ZIndex = 7
@@ -444,33 +543,33 @@ function Toggle(text, default, callback)
     toggleBtn.MouseButton1Click:Connect(function()
         isOn = not isOn
         toggleBtn.BackgroundColor3 = isOn and C.Verde or C.CinzaEscuro
-        dot.Position = isOn and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+        dot.Position = isOn and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
         
         if callback then
             callback(isOn)
         end
     end)
     
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 32)
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 34)
     return frame
 end
 
 function Slider(text, min, max, default, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 45)
+    frame.Size = UDim2.new(1, 0, 0, 48)
     frame.BackgroundColor3 = C.PretoMedio
-    frame.BackgroundTransparency = 0.6
+    frame.BackgroundTransparency = 0.7
     frame.BorderSizePixel = 0
     frame.ZIndex = 6
     frame.Parent = Scroll
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
+    corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = frame
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -10, 0, 15)
-    label.Position = UDim2.new(0, 8, 0, 3)
+    label.Size = UDim2.new(1, -10, 0, 16)
+    label.Position = UDim2.new(0, 10, 0, 3)
     label.BackgroundTransparency = 1
     label.Text = text .. ": " .. tostring(default)
     label.TextColor3 = C.BrancoSuave
@@ -481,32 +580,32 @@ function Slider(text, min, max, default, callback)
     label.Parent = frame
     
     local track = Instance.new("Frame")
-    track.Size = UDim2.new(1, -16, 0, 4)
-    track.Position = UDim2.new(0, 8, 0, 28)
+    track.Size = UDim2.new(1, -20, 0, 5)
+    track.Position = UDim2.new(0, 10, 0, 28)
     track.BackgroundColor3 = C.CinzaEscuro
     track.BorderSizePixel = 0
     track.ZIndex = 6
     track.Parent = frame
     
     local trackCorner = Instance.new("UICorner")
-    trackCorner.CornerRadius = UDim.new(0, 2)
+    trackCorner.CornerRadius = UDim.new(0, 3)
     trackCorner.Parent = track
     
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
     fill.BackgroundColor3 = C.Branco
-    fill.BackgroundTransparency = 0.3
+    fill.BackgroundTransparency = 0.4
     fill.BorderSizePixel = 0
     fill.ZIndex = 6
     fill.Parent = track
     
     local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim.new(0, 2)
+    fillCorner.CornerRadius = UDim.new(0, 3)
     fillCorner.Parent = fill
     
     local thumb = Instance.new("Frame")
-    thumb.Size = UDim2.new(0, 12, 0, 12)
-    thumb.Position = UDim2.new((default - min) / (max - min), -6, 0.5, -6)
+    thumb.Size = UDim2.new(0, 14, 0, 14)
+    thumb.Position = UDim2.new((default - min) / (max - min), -7, 0.5, -7)
     thumb.BackgroundColor3 = C.Branco
     thumb.BorderSizePixel = 0
     thumb.ZIndex = 7
@@ -542,7 +641,7 @@ function Slider(text, min, max, default, callback)
             currentValue = math.floor(min + (max - min) * percentage)
             
             fill.Size = UDim2.new(percentage, 0, 1, 0)
-            thumb.Position = UDim2.new(percentage, -6, 0.5, -6)
+            thumb.Position = UDim2.new(percentage, -7, 0.5, -7)
             label.Text = text .. ": " .. tostring(currentValue)
             
             if callback then
@@ -551,15 +650,195 @@ function Slider(text, min, max, default, callback)
         end
     end)
     
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 47)
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 50)
+    return frame
+end
+
+function ColorPicker(text, defaultColor, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 36)
+    frame.BackgroundColor3 = C.PretoMedio
+    frame.BackgroundTransparency = 0.7
+    frame.BorderSizePixel = 0
+    frame.ZIndex = 6
+    frame.Parent = Scroll
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 180, 1, 0)
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = C.BrancoSuave
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 11
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.ZIndex = 6
+    label.Parent = frame
+    
+    local preview = Instance.new("Frame")
+    preview.Size = UDim2.new(0, 24, 0, 24)
+    preview.Position = UDim2.new(1, -30, 0.5, -12)
+    preview.BackgroundColor3 = defaultColor
+    preview.BorderSizePixel = 0
+    preview.ZIndex = 6
+    preview.Parent = frame
+    
+    local prevCorner = Instance.new("UICorner")
+    prevCorner.CornerRadius = UDim.new(0, 6)
+    prevCorner.Parent = preview
+    
+    -- Paleta de cores
+    local Colors = {
+        Color3.fromRGB(255, 50, 50), Color3.fromRGB(255, 100, 100),
+        Color3.fromRGB(255, 150, 0), Color3.fromRGB(255, 200, 0),
+        Color3.fromRGB(200, 255, 0), Color3.fromRGB(100, 255, 50),
+        Color3.fromRGB(0, 200, 80), Color3.fromRGB(0, 200, 150),
+        Color3.fromRGB(0, 200, 200), Color3.fromRGB(0, 150, 255),
+        Color3.fromRGB(50, 100, 255), Color3.fromRGB(100, 50, 255),
+        Color3.fromRGB(150, 50, 255), Color3.fromRGB(200, 50, 255),
+        Color3.fromRGB(255, 50, 200), Color3.fromRGB(255, 255, 255),
+        Color3.fromRGB(200, 200, 200), Color3.fromRGB(150, 150, 150),
+        Color3.fromRGB(100, 100, 100), Color3.fromRGB(50, 50, 50),
+    }
+    
+    local paletteOpen = false
+    local paletteFrame = nil
+    
+    preview.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if paletteOpen and paletteFrame then
+                paletteFrame:Destroy()
+                paletteFrame = nil
+                paletteOpen = false
+                return
+            end
+            
+            paletteOpen = true
+            paletteFrame = Instance.new("Frame")
+            paletteFrame.Size = UDim2.new(0, 200, 0, 180)
+            paletteFrame.Position = UDim2.new(0, math.random(50, 150), 0, math.random(100, 200))
+            paletteFrame.BackgroundColor3 = C.PretoFundo
+            paletteFrame.BorderSizePixel = 0
+            paletteFrame.ZIndex = 100
+            paletteFrame.Parent = ScreenGui
+            
+            local palCorner = Instance.new("UICorner")
+            palCorner.CornerRadius = UDim.new(0, 10)
+            palCorner.Parent = paletteFrame
+            
+            local palStroke = Instance.new("UIStroke")
+            palStroke.Thickness = 1.5
+            palStroke.Color = C.Branco
+            palStroke.Transparency = 0.7
+            palStroke.Parent = paletteFrame
+            
+            local grid = Instance.new("UIGridLayout")
+            grid.CellSize = UDim2.new(0, 28, 0, 28)
+            grid.CellPadding = UDim2.new(0, 4, 0, 4)
+            grid.Parent = paletteFrame
+            
+            for _, color in ipairs(Colors) do
+                local colorBtn = Instance.new("TextButton")
+                colorBtn.Size = UDim2.new(0, 28, 0, 28)
+                colorBtn.BackgroundColor3 = color
+                colorBtn.BorderSizePixel = 0
+                colorBtn.Text = ""
+                colorBtn.ZIndex = 101
+                colorBtn.Parent = paletteFrame
+                
+                local cbCorner = Instance.new("UICorner")
+                cbCorner.CornerRadius = UDim.new(0, 6)
+                cbCorner.Parent = colorBtn
+                
+                colorBtn.MouseButton1Click:Connect(function()
+                    preview.BackgroundColor3 = color
+                    if callback then callback(color) end
+                    paletteFrame:Destroy()
+                    paletteFrame = nil
+                    paletteOpen = false
+                end)
+            end
+        end
+    end)
+    
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 38)
+    return frame
+end
+
+function Keybind(text, defaultKey, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 36)
+    frame.BackgroundColor3 = C.PretoMedio
+    frame.BackgroundTransparency = 0.7
+    frame.BorderSizePixel = 0
+    frame.ZIndex = 6
+    frame.Parent = Scroll
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 180, 1, 0)
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = C.BrancoSuave
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 11
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.ZIndex = 6
+    label.Parent = frame
+    
+    local keyBtn = Instance.new("TextButton")
+    keyBtn.Size = UDim2.new(0, 70, 0, 24)
+    keyBtn.Position = UDim2.new(1, -76, 0.5, -12)
+    keyBtn.BackgroundColor3 = C.CinzaEscuro
+    keyBtn.BackgroundTransparency = 0.3
+    keyBtn.BorderSizePixel = 0
+    keyBtn.Text = defaultKey.Name
+    keyBtn.TextColor3 = C.Branco
+    keyBtn.Font = Enum.Font.GothamBold
+    keyBtn.TextSize = 10
+    keyBtn.ZIndex = 6
+    keyBtn.Parent = frame
+    
+    local keyCorner = Instance.new("UICorner")
+    keyCorner.CornerRadius = UDim.new(0, 6)
+    keyCorner.Parent = keyBtn
+    
+    local listening = false
+    
+    keyBtn.MouseButton1Click:Connect(function()
+        listening = true
+        keyBtn.Text = "..."
+        keyBtn.BackgroundColor3 = C.Branco
+        keyBtn.BackgroundTransparency = 0.8
+    end)
+    
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if listening and not gameProcessed and input.UserInputType == Enum.UserInputType.Keyboard then
+            listening = false
+            keyBtn.Text = input.KeyCode.Name
+            keyBtn.BackgroundColor3 = C.CinzaEscuro
+            keyBtn.BackgroundTransparency = 0.3
+            if callback then callback(input.KeyCode) end
+        end
+    end)
+    
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 38)
     return frame
 end
 
 function Button(text, color, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 32)
+    btn.Size = UDim2.new(1, 0, 0, 34)
     btn.BackgroundColor3 = color or C.Branco
-    btn.BackgroundTransparency = 0.8
+    btn.BackgroundTransparency = 0.85
     btn.BorderSizePixel = 0
     btn.Text = text
     btn.TextColor3 = C.Branco
@@ -569,20 +848,18 @@ function Button(text, color, callback)
     btn.Parent = Scroll
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
+    corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = btn
     
     btn.MouseButton1Click:Connect(function()
-        if callback then
-            callback()
-        end
+        if callback then callback() end
     end)
     
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 34)
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 36)
     return btn
 end
 
--- ═══════════════════════ SISTEMA DE ARRASTO ═══════════════════════
+-- ═══════════════════════ SISTEMA DE ARRASTO DO MENU ═══════════════════════
 local dragging = false
 local dragStart = nil
 local startPos = nil
@@ -596,7 +873,7 @@ Header.InputBegan:Connect(function(input)
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement) then
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
         local delta = input.Position - dragStart
         Main.Position = UDim2.new(
             startPos.X.Scale, startPos.X.Offset + delta.X,
@@ -614,16 +891,16 @@ end)
 -- ═══════════════════════ MONITOR FPS/PING ═══════════════════════
 local StatsDisplay = Instance.new("Frame")
 StatsDisplay.Name = "StatsDisplay"
-StatsDisplay.Size = UDim2.new(0, 130, 0, 40)
-StatsDisplay.Position = UDim2.new(1, -140, 0, 10)
+StatsDisplay.Size = UDim2.new(0, 140, 0, 44)
+StatsDisplay.Position = UDim2.new(1, -150, 0, 10)
 StatsDisplay.BackgroundColor3 = C.PretoFundo
-StatsDisplay.BackgroundTransparency = 0.3
+StatsDisplay.BackgroundTransparency = 0.25
 StatsDisplay.BorderSizePixel = 0
 StatsDisplay.ZIndex = 1000
 StatsDisplay.Parent = ScreenGui
 
 local StatsCorner = Instance.new("UICorner")
-StatsCorner.CornerRadius = UDim.new(0, 8)
+StatsCorner.CornerRadius = UDim.new(0, 10)
 StatsCorner.Parent = StatsDisplay
 
 local StatsStroke = Instance.new("UIStroke")
@@ -633,25 +910,25 @@ StatsStroke.Transparency = 0.9
 StatsStroke.Parent = StatsDisplay
 
 local FPSLabel = Instance.new("TextLabel")
-FPSLabel.Size = UDim2.new(1, -5, 0, 16)
-FPSLabel.Position = UDim2.new(0, 5, 0, 5)
+FPSLabel.Size = UDim2.new(1, -5, 0, 18)
+FPSLabel.Position = UDim2.new(0, 5, 0, 4)
 FPSLabel.BackgroundTransparency = 1
 FPSLabel.Text = "FPS: --"
 FPSLabel.TextColor3 = C.Verde
 FPSLabel.Font = Enum.Font.GothamBold
-FPSLabel.TextSize = 11
+FPSLabel.TextSize = 12
 FPSLabel.TextXAlignment = Enum.TextXAlignment.Left
 FPSLabel.ZIndex = 1001
 FPSLabel.Parent = StatsDisplay
 
 local PingLabel = Instance.new("TextLabel")
-PingLabel.Size = UDim2.new(1, -5, 0, 16)
-PingLabel.Position = UDim2.new(0, 5, 0, 21)
+PingLabel.Size = UDim2.new(1, -5, 0, 18)
+PingLabel.Position = UDim2.new(0, 5, 0, 22)
 PingLabel.BackgroundTransparency = 1
 PingLabel.Text = "PING: --ms"
 PingLabel.TextColor3 = C.Azul
 PingLabel.Font = Enum.Font.GothamBold
-PingLabel.TextSize = 11
+PingLabel.TextSize = 12
 PingLabel.TextXAlignment = Enum.TextXAlignment.Left
 PingLabel.ZIndex = 1001
 PingLabel.Parent = StatsDisplay
@@ -690,65 +967,129 @@ function UpdateESP()
         local dist = (myRoot.Position - root.Position).Magnitude
         if dist > Config.ESP.MaxDistance then continue end
         
-        -- Criar BillboardGui
-        local billboard = Instance.new("BillboardGui")
-        billboard.Size = UDim2.new(0, 150, 0, 50)
-        billboard.StudsOffset = Vector3.new(0, 3, 0)
-        billboard.AlwaysOnTop = true
-        billboard.LightInfluence = 0
-        billboard.Parent = head
-        table.insert(ESPObjects, billboard)
-        
-        local yOffset = 0
-        
-        if Config.ESP.Names then
-            local nameLabel = Instance.new("TextLabel")
-            nameLabel.Size = UDim2.new(1, 0, 0, 16)
-            nameLabel.Position = UDim2.new(0, 0, 0, yOffset)
-            nameLabel.BackgroundTransparency = 1
-            nameLabel.Text = player.Name
-            nameLabel.TextColor3 = C.Branco
-            nameLabel.Font = Enum.Font.GothamBold
-            nameLabel.TextSize = 12
-            nameLabel.TextStrokeTransparency = 0.5
-            nameLabel.Parent = billboard
-            yOffset = yOffset + 17
+        -- Verificar time
+        local isTeam = false
+        if Config.ESP.TeamCheck then
+            isTeam = player.Team == LocalPlayer.Team and player.Team ~= nil
         end
         
-        if Config.ESP.HealthBar then
-            local healthPercent = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
-            
-            local barBg = Instance.new("Frame")
-            barBg.Size = UDim2.new(1, 0, 0, 4)
-            barBg.Position = UDim2.new(0, 0, 0, yOffset)
-            barBg.BackgroundColor3 = C.CinzaEscuro
-            barBg.BorderSizePixel = 0
-            barBg.Parent = billboard
-            
-            local barFill = Instance.new("Frame")
-            barFill.Size = UDim2.new(healthPercent, 0, 1, 0)
-            barFill.BackgroundColor3 = healthPercent > 0.5 and C.Verde or (healthPercent > 0.25 and C.Amarelo or C.Vermelho)
-            barFill.BorderSizePixel = 0
-            barFill.Parent = barBg
-            
-            yOffset = yOffset + 6
+        local boxColor = isTeam and Config.ESP.TeamBoxColor or Config.ESP.BoxColor
+        local nameColor = isTeam and Config.ESP.TeamNameColor or Config.ESP.NameColor
+        
+        -- BOX (Highlight)
+        if Config.ESP.Boxes then
+            local highlight = Instance.new("Highlight")
+            highlight.FillColor = boxColor
+            highlight.FillTransparency = 0.7
+            highlight.OutlineColor = boxColor
+            highlight.OutlineTransparency = 0.4
+            highlight.Adornee = char
+            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            highlight.Parent = ScreenGui
+            table.insert(ESPObjects, highlight)
         end
         
-        if Config.ESP.Distance then
-            local distLabel = Instance.new("TextLabel")
-            distLabel.Size = UDim2.new(1, 0, 0, 14)
-            distLabel.Position = UDim2.new(0, 0, 0, yOffset)
-            distLabel.BackgroundTransparency = 1
-            distLabel.Text = math.floor(dist) .. "m"
-            distLabel.TextColor3 = C.CinzaClaro
-            distLabel.Font = Enum.Font.Gotham
-            distLabel.TextSize = 10
-            distLabel.Parent = billboard
+        -- Billboard (Nomes, Vida, Distância)
+        if Config.ESP.Names or Config.ESP.HealthBar or Config.ESP.Distance then
+            local billboard = Instance.new("BillboardGui")
+            billboard.Size = UDim2.new(0, 160, 0, 60)
+            billboard.StudsOffset = Vector3.new(0, 3.2, 0)
+            billboard.AlwaysOnTop = true
+            billboard.LightInfluence = 0
+            billboard.Parent = head
+            table.insert(ESPObjects, billboard)
+            
+            local yOffset = 0
+            
+            if Config.ESP.Names then
+                local nameLabel = Instance.new("TextLabel")
+                nameLabel.Size = UDim2.new(1, 0, 0, 18)
+                nameLabel.Position = UDim2.new(0, 0, 0, yOffset)
+                nameLabel.BackgroundTransparency = 1
+                nameLabel.Text = player.Name
+                nameLabel.TextColor3 = nameColor
+                nameLabel.Font = Enum.Font.GothamBold
+                nameLabel.TextSize = 13
+                nameLabel.TextStrokeTransparency = 0.4
+                nameLabel.Parent = billboard
+                yOffset = yOffset + 19
+            end
+            
+            if Config.ESP.HealthBar then
+                local healthPercent = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+                
+                local barBg = Instance.new("Frame")
+                barBg.Size = UDim2.new(1, 0, 0, 5)
+                barBg.Position = UDim2.new(0, 0, 0, yOffset)
+                barBg.BackgroundColor3 = C.CinzaEscuro
+                barBg.BorderSizePixel = 0
+                barBg.Parent = billboard
+                
+                local barFill = Instance.new("Frame")
+                barFill.Size = UDim2.new(healthPercent, 0, 1, 0)
+                barFill.BackgroundColor3 = healthPercent > 0.5 and C.Verde or (healthPercent > 0.25 and C.Amarelo or C.Vermelho)
+                barFill.BorderSizePixel = 0
+                barFill.Parent = barBg
+                
+                yOffset = yOffset + 7
+            end
+            
+            if Config.ESP.Distance then
+                local distLabel = Instance.new("TextLabel")
+                distLabel.Size = UDim2.new(1, 0, 0, 16)
+                distLabel.Position = UDim2.new(0, 0, 0, yOffset)
+                distLabel.BackgroundTransparency = 1
+                distLabel.Text = math.floor(dist) .. "m"
+                distLabel.TextColor3 = Config.ESP.DistanceColor
+                distLabel.Font = Enum.Font.Gotham
+                distLabel.TextSize = 11
+                distLabel.Parent = billboard
+            end
+        end
+        
+        -- TRACERS (Linhas)
+        if Config.ESP.Tracers then
+            local tracer = Drawing.new("Line")
+            tracer.Thickness = 1.5
+            tracer.Color = Config.ESP.TracerColor
+            tracer.Transparency = 0.7
+            tracer.Visible = true
+            
+            local connection = RunService.RenderStepped:Connect(function()
+                local rootPos, onScreen = Camera:WorldToViewportPoint(root.Position)
+                if onScreen then
+                    tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                    tracer.To = Vector2.new(rootPos.X, rootPos.Y)
+                else
+                    tracer.Visible = false
+                end
+            end)
+            
+            table.insert(ESPObjects, {connection = connection, tracer = tracer})
         end
     end
 end
 
 -- ═══════════════════════ AIMBOT ═══════════════════════
+local FOVCircle = nil
+
+function UpdateFOV()
+    if FOVCircle then
+        FOVCircle:Remove()
+        FOVCircle = nil
+    end
+    
+    if Config.Aimbot.Enabled and Config.Aimbot.ShowFOV then
+        FOVCircle = Drawing.new("Circle")
+        FOVCircle.Radius = Config.Aimbot.FOV
+        FOVCircle.Color = Config.Aimbot.FOVColor
+        FOVCircle.Thickness = 2
+        FOVCircle.Transparency = 0.7
+        FOVCircle.Filled = false
+        FOVCircle.Visible = true
+    end
+end
+
 function GetClosestTarget()
     local bestTarget = nil
     local bestDist = Config.Aimbot.FOV
@@ -764,6 +1105,13 @@ function GetClosestTarget()
         local hum = char:FindFirstChild("Humanoid")
         
         if aimPart and hum and hum.Health > 0 then
+            -- Verificar time
+            if Config.Aimbot.TeamCheck then
+                if player.Team == LocalPlayer.Team and player.Team ~= nil then
+                    continue
+                end
+            end
+            
             local pos, onScreen = Camera:WorldToViewportPoint(aimPart.Position)
             
             if onScreen then
@@ -815,6 +1163,11 @@ RunService.RenderStepped:Connect(function()
         end
     end)
     
+    -- Atualizar FOV Circle
+    if FOVCircle then
+        FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    end
+    
     -- Aimbot
     if Config.Aimbot.Enabled then
         local target = GetClosestTarget()
@@ -839,18 +1192,18 @@ function UpdateContent()
         Section("🏠 BEM-VINDO")
         
         local infoFrame = Instance.new("Frame")
-        infoFrame.Size = UDim2.new(1, 0, 0, 60)
+        infoFrame.Size = UDim2.new(1, 0, 0, 70)
         infoFrame.BackgroundColor3 = C.PretoMedio
         infoFrame.BackgroundTransparency = 0.6
         infoFrame.BorderSizePixel = 0
         infoFrame.Parent = Scroll
-        Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 6)
+        Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 8)
         
         local infoText = Instance.new("TextLabel")
         infoText.Size = UDim2.new(1, -10, 1, 0)
         infoText.Position = UDim2.new(0, 5, 0, 0)
         infoText.BackgroundTransparency = 1
-        infoText.Text = "⚙ Menu de Configurações\nVersão 2.0 • Totalmente funcional\nUse as abas ao lado para navegar"
+        infoText.Text = "⚙ Menu de Configurações v2.0\n✅ Totalmente funcional e otimizado\n📌 Use as abas ao lado para navegar"
         infoText.TextColor3 = C.BrancoSuave
         infoText.Font = Enum.Font.Gotham
         infoText.TextSize = 11
@@ -858,13 +1211,17 @@ function UpdateContent()
         infoText.TextYAlignment = Enum.TextYAlignment.Center
         infoText.Parent = infoFrame
         
-        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 65)
+        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 75)
         
         Section("🔑 ATALHOS")
+        Keybind("Tecla do Menu", Config.MenuKey, function(key)
+            Config.MenuKey = key
+        end)
+        
         local keyInfo = Instance.new("TextLabel")
         keyInfo.Size = UDim2.new(1, 0, 0, 40)
         keyInfo.BackgroundTransparency = 1
-        keyInfo.Text = "Pressione RightShift para abrir/fechar o menu\nArraste o cabeçalho para mover"
+        keyInfo.Text = "Pressione a tecla configurada para\nabrir/fechar o menu rapidamente"
         keyInfo.TextColor3 = C.Cinza
         keyInfo.Font = Enum.Font.Gotham
         keyInfo.TextSize = 10
@@ -878,30 +1235,148 @@ function UpdateContent()
             Config.ESP.Enabled = v 
             if not v then
                 for _, obj in pairs(ESPObjects) do
+                    if obj.connection then
+                        obj.connection:Disconnect()
+                    end
                     pcall(function() obj:Destroy() end)
                 end
                 ESPObjects = {}
             end
         end)
         
-        Section("📦 OPÇÕES")
+        Section("📦 BOXES")
+        Toggle("Mostrar Box", Config.ESP.Boxes, function(v) Config.ESP.Boxes = v end)
+        ColorPicker("Cor Inimigos", Config.ESP.BoxColor, function(c) Config.ESP.BoxColor = c end)
+        ColorPicker("Cor Aliados", Config.ESP.TeamBoxColor, function(c) Config.ESP.TeamBoxColor = c end)
+        
+        Section("📝 NOMES")
         Toggle("Mostrar Nomes", Config.ESP.Names, function(v) Config.ESP.Names = v end)
+        ColorPicker("Cor Nome Inimigo", Config.ESP.NameColor, function(c) Config.ESP.NameColor = c end)
+        ColorPicker("Cor Nome Aliado", Config.ESP.TeamNameColor, function(c) Config.ESP.TeamNameColor = c end)
+        
+        Section("❤ VIDA E DISTÂNCIA")
         Toggle("Barra de Vida", Config.ESP.HealthBar, function(v) Config.ESP.HealthBar = v end)
         Toggle("Mostrar Distância", Config.ESP.Distance, function(v) Config.ESP.Distance = v end)
-        Toggle("Detectar Times", Config.ESP.TeamCheck, function(v) Config.ESP.TeamCheck = v end)
+        ColorPicker("Cor Distância", Config.ESP.DistanceColor, function(c) Config.ESP.DistanceColor = c end)
         
-        Section("📏 DISTÂNCIA")
+        Section("📍 TRACERS")
+        Toggle("Mostrar Tracers", Config.ESP.Tracers, function(v) Config.ESP.Tracers = v end)
+        ColorPicker("Cor Tracers", Config.ESP.TracerColor, function(c) Config.ESP.TracerColor = c end)
+        
+        Section("⚙ OUTROS")
+        Toggle("Detectar Times", Config.ESP.TeamCheck, function(v) Config.ESP.TeamCheck = v end)
         Slider("Distância Máxima", 100, 3000, Config.ESP.MaxDistance, function(v) Config.ESP.MaxDistance = v end)
         
     elseif CurrentTab == "Aimbot" then
         Section("🎯 AIMBOT")
-        Toggle("Ativar Aimbot", Config.Aimbot.Enabled, function(v) Config.Aimbot.Enabled = v end)
+        Toggle("Ativar Aimbot", Config.Aimbot.Enabled, function(v) 
+            Config.Aimbot.Enabled = v
+            UpdateFOV()
+        end)
         Toggle("Detectar Times", Config.Aimbot.TeamCheck, function(v) Config.Aimbot.TeamCheck = v end)
         
-        Section("🔴 CONFIGURAÇÕES")
-        Slider("Raio de Alcance (FOV)", 30, 500, Config.Aimbot.FOV, function(v) Config.Aimbot.FOV = v end)
+        Section("🔴 FOV")
+        Toggle("Mostrar FOV", Config.Aimbot.ShowFOV, function(v) 
+            Config.Aimbot.ShowFOV = v
+            UpdateFOV()
+        end)
+        ColorPicker("Cor do FOV", Config.Aimbot.FOVColor, function(c) 
+            Config.Aimbot.FOVColor = c
+            UpdateFOV()
+        end)
+        Slider("Raio do FOV", 30, 500, Config.Aimbot.FOV, function(v) 
+            Config.Aimbot.FOV = v
+            UpdateFOV()
+        end)
+        
+        Section("🎯 CONFIGURAÇÕES")
         Slider("Suavidade", 1, 20, Config.Aimbot.Smoothness, function(v) Config.Aimbot.Smoothness = v end)
         Slider("Distância Máxima", 100, 2000, Config.Aimbot.MaxDistance, function(v) Config.Aimbot.MaxDistance = v end)
+        
+        -- Dropdown para parte do corpo
+        local parts = {"Head", "HumanoidRootPart", "Torso", "UpperTorso", "LowerTorso"}
+        local partFrame = Instance.new("Frame")
+        partFrame.Size = UDim2.new(1, 0, 0, 36)
+        partFrame.BackgroundColor3 = C.PretoMedio
+        partFrame.BackgroundTransparency = 0.7
+        partFrame.BorderSizePixel = 0
+        partFrame.ZIndex = 6
+        partFrame.Parent = Scroll
+        
+        local partCorner = Instance.new("UICorner")
+        partCorner.CornerRadius = UDim.new(0, 8)
+        partCorner.Parent = partFrame
+        
+        local partLabel = Instance.new("TextLabel")
+        partLabel.Size = UDim2.new(0, 180, 1, 0)
+        partLabel.Position = UDim2.new(0, 10, 0, 0)
+        partLabel.BackgroundTransparency = 1
+        partLabel.Text = "Parte do Corpo"
+        partLabel.TextColor3 = C.BrancoSuave
+        partLabel.Font = Enum.Font.Gotham
+        partLabel.TextSize = 11
+        partLabel.TextXAlignment = Enum.TextXAlignment.Left
+        partLabel.ZIndex = 6
+        partLabel.Parent = partFrame
+        
+        local partBtn = Instance.new("TextButton")
+        partBtn.Size = UDim2.new(0, 80, 0, 24)
+        partBtn.Position = UDim2.new(1, -86, 0.5, -12)
+        partBtn.BackgroundColor3 = C.CinzaEscuro
+        partBtn.BackgroundTransparency = 0.3
+        partBtn.BorderSizePixel = 0
+        partBtn.Text = Config.Aimbot.AimPart
+        partBtn.TextColor3 = C.Branco
+        partBtn.Font = Enum.Font.GothamBold
+        partBtn.TextSize = 10
+        partBtn.ZIndex = 6
+        partBtn.Parent = partFrame
+        
+        local partBtnCorner = Instance.new("UICorner")
+        partBtnCorner.CornerRadius = UDim.new(0, 6)
+        partBtnCorner.Parent = partBtn
+        
+        local expanded = false
+        local partOptions = {}
+        
+        partBtn.MouseButton1Click:Connect(function()
+            expanded = not expanded
+            
+            if expanded then
+                partFrame.Size = UDim2.new(1, 0, 0, 36 + (26 * #parts))
+                for i, part in ipairs(parts) do
+                    local option = Instance.new("TextButton")
+                    option.Size = UDim2.new(1, 0, 0, 24)
+                    option.Position = UDim2.new(0, 0, 0, 36 + (26 * (i - 1)))
+                    option.BackgroundColor3 = C.PretoMedio
+                    option.BackgroundTransparency = 0.5
+                    option.BorderSizePixel = 0
+                    option.Text = "   " .. part
+                    option.TextColor3 = C.CinzaClaro
+                    option.Font = Enum.Font.Gotham
+                    option.TextSize = 10
+                    option.TextXAlignment = Enum.TextXAlignment.Left
+                    option.ZIndex = 7
+                    option.Parent = partFrame
+                    
+                    option.MouseButton1Click:Connect(function()
+                        Config.Aimbot.AimPart = part
+                        partBtn.Text = part
+                        expanded = false
+                        partFrame.Size = UDim2.new(1, 0, 0, 36)
+                        for _, opt in ipairs(partOptions) do opt:Destroy() end
+                        partOptions = {}
+                    end)
+                    table.insert(partOptions, option)
+                end
+            else
+                partFrame.Size = UDim2.new(1, 0, 0, 36)
+                for _, opt in ipairs(partOptions) do opt:Destroy() end
+                partOptions = {}
+            end
+        end)
+        
+        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 38)
         
     elseif CurrentTab == "Visual" then
         Section("🎨 VISUAIS")
@@ -923,7 +1398,8 @@ function UpdateContent()
             Lighting.FogEnd = v and 100000 or 1000
         end)
         
-        Toggle("Mudar FOV da Câmera", Config.Visuals.FOVChanger, function(v)
+        Section("📷 CÂMERA")
+        Toggle("Mudar FOV", Config.Visuals.FOVChanger, function(v)
             Config.Visuals.FOVChanger = v
             Camera.FieldOfView = v and Config.Visuals.FOVValue or 70
         end)
@@ -935,60 +1411,67 @@ function UpdateContent()
             end
         end)
         
+        Section("🎯 CROSSHAIR")
+        Toggle("Mostrar Crosshair", Config.Visuals.Crosshair, function(v) Config.Visuals.Crosshair = v end)
+        ColorPicker("Cor do Crosshair", Config.Visuals.CrosshairColor, function(c) Config.Visuals.CrosshairColor = c end)
+        Slider("Tamanho", 5, 30, Config.Visuals.CrosshairSize, function(v) Config.Visuals.CrosshairSize = v end)
+        
     elseif CurrentTab == "Monitor" then
         Section("📊 MONITOR")
         Toggle("Mostrar FPS", Config.Monitor.ShowFPS, function(v) Config.Monitor.ShowFPS = v end)
         Toggle("Mostrar Ping", Config.Monitor.ShowPing, function(v) Config.Monitor.ShowPing = v end)
         
         local info = Instance.new("TextLabel")
-        info.Size = UDim2.new(1, 0, 0, 30)
+        info.Size = UDim2.new(1, 0, 0, 40)
         info.BackgroundTransparency = 1
-        info.Text = "📊 Monitor sempre visível no\ncanto superior direito da tela"
+        info.Text = "📊 Monitor sempre visível no\ncanto superior direito da tela\n✅ FPS e Ping em tempo real"
         info.TextColor3 = C.Cinza
         info.Font = Enum.Font.Gotham
         info.TextSize = 10
         info.TextXAlignment = Enum.TextXAlignment.Left
         info.Parent = Scroll
-        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 32)
+        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 42)
         
     elseif CurrentTab == "Config" then
         Section("⚙ CONFIGURAÇÕES")
         
-        Button("💾 Salvar Configurações", C.Verde, function()
+        Button("💾 SALVAR CONFIGURAÇÕES", C.Verde, function()
             local success = SaveSystem:Save()
             if success then
                 print("✅ Configurações salvas com sucesso!")
             end
         end)
         
-        Button("📂 Carregar Configurações", C.Azul, function()
+        Button("📂 CARREGAR CONFIGURAÇÕES", C.Azul, function()
             local success = SaveSystem:Load()
             if success then
                 print("✅ Configurações carregadas!")
                 UpdateContent()
+                UpdateFOV()
             end
         end)
         
-        Button("🔄 Resetar para Padrão", C.Vermelho, function()
+        Button("🔄 RESETAR PARA PADRÃO", C.Vermelho, function()
             SaveSystem:Reset()
             print("🔄 Configurações resetadas!")
             UpdateContent()
+            UpdateFOV()
         end)
         
         Section("ℹ INFORMAÇÕES")
         local infoFrame = Instance.new("Frame")
-        infoFrame.Size = UDim2.new(1, 0, 0, 50)
+        infoFrame.Size = UDim2.new(1, 0, 0, 60)
         infoFrame.BackgroundColor3 = C.PretoMedio
         infoFrame.BackgroundTransparency = 0.6
         infoFrame.BorderSizePixel = 0
         infoFrame.Parent = Scroll
-        Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 6)
+        Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 8)
         
         local infoText = Instance.new("TextLabel")
         infoText.Size = UDim2.new(1, -10, 1, 0)
         infoText.Position = UDim2.new(0, 5, 0, 0)
         infoText.BackgroundTransparency = 1
-        infoText.Text = "📌 Menu de Configurações v2.0\n✅ Todas as funções otimizadas e funcionais"
+        infoText.Text = "📌 Menu de Configurações v2.0\n✅ Todas as funções otimizadas e funcionais\n🔑 Tecla personalizável para abrir/fechar"
         infoText.TextColor3 = C.BrancoSuave
         infoText.Font = Enum.Font.Gotham
         infoText.TextSize = 10
@@ -996,7 +1479,7 @@ function UpdateContent()
         infoText.TextYAlignment = Enum.TextYAlignment.Center
         infoText.Parent = infoFrame
         
-        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 55)
+        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 65)
     end
 end
 
@@ -1005,6 +1488,7 @@ end
 -- Botões do header
 MinBtn.MouseButton1Click:Connect(function()
     Main.Visible = false
+    Logo.Visible = true
 end)
 
 CloseBtn.MouseButton1Click:Connect(function()
@@ -1015,6 +1499,9 @@ end)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed and input.KeyCode == Config.MenuKey then
         Main.Visible = not Main.Visible
+        if Main.Visible then
+            Logo.Visible = false
+        end
     end
 end)
 
@@ -1049,14 +1536,18 @@ SaveSystem:Load()
 
 -- Atualizar conteúdo inicial
 UpdateContent()
+UpdateFOV()
 
--- Animação de entrada
+-- Animação de entrada suave
 Main.BackgroundTransparency = 0.3
-for i = 1, 5 do
-    Main.BackgroundTransparency = Main.BackgroundTransparency - 0.04
+for i = 1, 10 do
+    Main.BackgroundTransparency = Main.BackgroundTransparency - 0.015
     task.wait(0.02)
 end
 
-print("✅ Menu de Configurações carregado com sucesso!")
-print("📊 Monitor FPS/PING ativo no canto superior direito")
-print("🔑 Pressione RightShift para abrir/fechar")
+print("╔════════════════════════════════════════════╗")
+print("║  ✅ MATEUS_SCRIPTS v22.0                  ║")
+print("║  📊 Menu carregado com sucesso!           ║")
+print("║  🔑 Pressione a tecla configurada         ║")
+print("║  📌 Logo arrastável ao minimizar          ║")
+print("╚════════════════════════════════════════════╝")
