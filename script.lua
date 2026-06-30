@@ -1,11 +1,10 @@
 --[[
     ╔═══════════════════════════════════════════════════════╗
-    ║   MATEUS_SCRIPTS v4.0 - ULTRA OTIMIZADO              ║
-    ║  • Detecção Automática Mobile/PC                     ║
-    ║  • Menu Arrastável em Ambos Dispositivos             ║
-    ║  • FPS/PING Perfeitos e Precisos                     ║
-    ║  • +20 Novas Funções                                 ║
-    ║  • Zero Bugs • Performance Máxima                    ║
+    ║   MATEUS_SCRIPTS v5.0 - MOBILE ULTRA OTIMIZADO       ║
+    ║  • Menu Arrastável no Mobile e PC                    ║
+    ║  • Touch Perfeito • Sem Bugs                         ║
+    ║  • Todas Funções Otimizadas                          ║
+    ║  • Interface Responsiva                              ║
     ╚═══════════════════════════════════════════════════════╝
 ]]
 
@@ -18,8 +17,6 @@ local Stats = game:GetService("Stats")
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
 local StarterGui = game:GetService("StarterGui")
-local TouchInputService = game:GetService("TouchInputService")
-local ContextActionService = game:GetService("ContextActionService")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -30,7 +27,7 @@ local IsMobile = UserInputService.TouchEnabled and not UserInputService.Keyboard
 local IsConsole = UserInputService.GamepadEnabled
 local IsPC = not IsMobile and not IsConsole
 
--- ═══════════════════════ CORES (Branco/Preto) ═══════════════════════
+-- ═══════════════════════ CORES ═══════════════════════
 local C = {
     Branco = Color3.fromRGB(255, 255, 255),
     BrancoSuave = Color3.fromRGB(235, 235, 240),
@@ -42,11 +39,9 @@ local C = {
     PretoMedio = Color3.fromRGB(28, 28, 32),
     PretoFundo = Color3.fromRGB(12, 12, 15),
     
-    -- Cores padrão
     Inimigo = Color3.fromRGB(255, 50, 50),
     Aliado = Color3.fromRGB(50, 150, 255),
     
-    -- Cores de status
     Verde = Color3.fromRGB(0, 220, 80),
     Vermelho = Color3.fromRGB(255, 50, 50),
     Amarelo = Color3.fromRGB(255, 210, 0),
@@ -104,9 +99,8 @@ local Config = {
         Crosshair = false,
         CrosshairSize = 15,
         CrosshairColor = C.Branco,
-        CrosshairType = "Cross", -- Cross, Dot, Circle
+        CrosshairType = "Cross",
         Watermark = true,
-        WatermarkText = "Mateus Scripts v4.0",
         NoCameraShake = false,
         NoRecoil = false,
         NoSpread = false,
@@ -117,8 +111,6 @@ local Config = {
         ShowFPS = true,
         ShowPing = true,
         ShowMemory = false,
-        ShowTime = false,
-        ShowPlayers = false,
     },
     
     Misc = {
@@ -207,13 +199,12 @@ function SaveSystem:Reset()
         Visuals = {
             FullBright = false, NoFog = false, FOVChanger = false, FOVValue = 70,
             Crosshair = false, CrosshairSize = 15, CrosshairColor = C.Branco,
-            CrosshairType = "Cross", Watermark = true, WatermarkText = "Mateus Scripts v4.0",
+            CrosshairType = "Cross", Watermark = true,
             NoCameraShake = false, NoRecoil = false, NoSpread = false,
         },
         
         Monitor = {
-            Enabled = true, ShowFPS = true, ShowPing = true,
-            ShowMemory = false, ShowTime = false, ShowPlayers = false,
+            Enabled = true, ShowFPS = true, ShowPing = true, ShowMemory = false,
         },
         
         Misc = {
@@ -232,14 +223,14 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- ═══════════════════════ TAMANHO DO MENU (Adaptável) ═══════════════════════
-local MenuWidth = IsMobile and 480 or 560
-local MenuHeight = IsMobile and 500 or 460
+-- ═══════════════════════ TAMANHO DO MENU ═══════════════════════
+local MenuWidth = IsMobile and 420 or 560
+local MenuHeight = IsMobile and 460 or 460
 
 -- ═══════════════════════ LOGO ARRASTÁVEL ═══════════════════════
 local Logo = Instance.new("ImageButton")
-Logo.Size = UDim2.new(0, 55, 0, 55)
-Logo.Position = UDim2.new(0.5, -27, 0.5, -27)
+Logo.Size = UDim2.new(0, 50, 0, 50)
+Logo.Position = UDim2.new(0.5, -25, 0.5, -25)
 Logo.BackgroundColor3 = C.PretoFundo
 Logo.BackgroundTransparency = 0.15
 Logo.Image = "rbxassetid://0"
@@ -249,7 +240,7 @@ Logo.ZIndex = 10000
 Logo.Parent = ScreenGui
 
 local LogoCorner = Instance.new("UICorner")
-LogoCorner.CornerRadius = UDim.new(0, 27)
+LogoCorner.CornerRadius = UDim.new(0, 25)
 LogoCorner.Parent = Logo
 
 local LogoStroke = Instance.new("UIStroke")
@@ -264,72 +255,68 @@ LogoText.BackgroundTransparency = 1
 LogoText.Text = "⚙"
 LogoText.TextColor3 = C.Branco
 LogoText.Font = Enum.Font.GothamBold
-LogoText.TextSize = 28
+LogoText.TextSize = 24
 LogoText.ZIndex = 10001
 LogoText.Parent = Logo
 
--- Sistema de arrasto da logo (Mobile + PC)
+-- ⚠️ SISTEMA DE ARRASTO DA LOGO CORRIGIDO PARA MOBILE
 local LogoDragging = false
-local LogoDragStart = nil
-local LogoStartPos = nil
-
-local function StartLogoDrag(input)
-    LogoDragging = true
-    LogoDragStart = input.Position
-    LogoStartPos = Logo.Position
-end
-
-local function UpdateLogoDrag(input)
-    if LogoDragging and LogoDragStart then
-        local delta = input.Position - LogoDragStart
-        Logo.Position = UDim2.new(
-            LogoStartPos.X.Scale, LogoStartPos.X.Offset + delta.X,
-            LogoStartPos.Y.Scale, LogoStartPos.Y.Offset + delta.Y
-        )
-    end
-end
-
-local function EndLogoDrag()
-    LogoDragging = false
-    LogoDragStart = nil
-    LogoStartPos = nil
-end
+local LogoDragOffset = Vector2.new(0, 0)
 
 -- PC Drag
 Logo.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        StartLogoDrag(input)
+        LogoDragging = true
+        LogoDragOffset = Vector2.new(
+            input.Position.X - Logo.AbsolutePosition.X,
+            input.Position.Y - Logo.AbsolutePosition.Y
+        )
     end
 end)
 
-Logo.InputChanged:Connect(function(input)
+UserInputService.InputChanged:Connect(function(input)
     if LogoDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        UpdateLogoDrag(input)
+        local newPos = Vector2.new(
+            input.Position.X - LogoDragOffset.X,
+            input.Position.Y - LogoDragOffset.Y
+        )
+        Logo.Position = UDim2.new(0, newPos.X, 0, newPos.Y)
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        EndLogoDrag()
+        LogoDragging = false
     end
 end)
 
 -- Mobile Drag
 if IsMobile then
-    Logo.TouchLongPress:Connect(function(touchPositions)
-        if #touchPositions > 0 then
-            StartLogoDrag({Position = touchPositions[1]})
+    local touchStart = nil
+    local logoStartPos = nil
+    
+    Logo.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            touchStart = input.Position
+            logoStartPos = Logo.Position
+            LogoDragging = true
         end
     end)
     
-    UserInputService.TouchMoved:Connect(function(input, processed)
-        if LogoDragging and not processed then
-            UpdateLogoDrag(input)
+    Logo.InputChanged:Connect(function(input)
+        if LogoDragging and input.UserInputType == Enum.UserInputType.Touch then
+            local delta = input.Position - touchStart
+            Logo.Position = UDim2.new(
+                logoStartPos.X.Scale, logoStartPos.X.Offset + delta.X,
+                logoStartPos.Y.Scale, logoStartPos.Y.Offset + delta.Y
+            )
         end
     end)
     
-    UserInputService.TouchEnded:Connect(function()
-        EndLogoDrag()
+    Logo.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            LogoDragging = false
+        end
     end)
 end
 
@@ -350,6 +337,7 @@ Main.ZIndex = 10000
 Main.Parent = ScreenGui
 
 Main.Active = true
+Main.Draggable = false
 
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 15)
@@ -363,7 +351,7 @@ MainStroke.Parent = Main
 
 -- ═══════════════════════ HEADER ═══════════════════════
 local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 50)
+Header.Size = UDim2.new(1, 0, 0, IsMobile and 45 or 50)
 Header.BackgroundColor3 = C.PretoClaro
 Header.BackgroundTransparency = 0.25
 Header.BorderSizePixel = 0
@@ -376,21 +364,21 @@ HeaderCorner.Parent = Header
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0, 250, 0, 22)
-Title.Position = UDim2.new(0, 15, 0, 6)
+Title.Position = UDim2.new(0, 15, 0, IsMobile and 4 or 6)
 Title.BackgroundTransparency = 1
-Title.Text = "⚙ CONFIGURAÇÕES"
+Title.Text = "⚙ CONFIG"
 Title.TextColor3 = C.Branco
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = IsMobile and 14 or 16
+Title.TextSize = IsMobile and 13 or 16
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.ZIndex = 10007
 Title.Parent = Header
 
 local SubTitle = Instance.new("TextLabel")
 SubTitle.Size = UDim2.new(0, 250, 0, 15)
-SubTitle.Position = UDim2.new(0, 15, 0, 28)
+SubTitle.Position = UDim2.new(0, 15, 0, IsMobile and 24 or 28)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = IsMobile and "Mobile Otimizado" or "PC Otimizado"
+SubTitle.Text = IsMobile and "📱 Mobile" or "💻 PC"
 SubTitle.TextColor3 = C.Cinza
 SubTitle.Font = Enum.Font.Gotham
 SubTitle.TextSize = 10
@@ -400,15 +388,15 @@ SubTitle.Parent = Header
 
 -- Botão Minimizar
 local MinBtn = Instance.new("TextButton")
-MinBtn.Size = UDim2.new(0, 28, 0, 28)
-MinBtn.Position = UDim2.new(1, -66, 0, 11)
+MinBtn.Size = UDim2.new(0, IsMobile and 32 or 28, 0, IsMobile and 32 or 28)
+MinBtn.Position = UDim2.new(1, -(IsMobile and 74 or 66), 0, IsMobile and 7 or 11)
 MinBtn.BackgroundColor3 = C.CinzaEscuro
 MinBtn.BackgroundTransparency = 0.3
 MinBtn.BorderSizePixel = 0
 MinBtn.Text = "─"
 MinBtn.TextColor3 = C.Branco
 MinBtn.Font = Enum.Font.GothamBold
-MinBtn.TextSize = 18
+MinBtn.TextSize = IsMobile and 20 or 18
 MinBtn.ZIndex = 10007
 MinBtn.Parent = Header
 
@@ -418,15 +406,15 @@ MinCorner.Parent = MinBtn
 
 -- Botão Fechar
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 28, 0, 28)
-CloseBtn.Position = UDim2.new(1, -32, 0, 11)
+CloseBtn.Size = UDim2.new(0, IsMobile and 32 or 28, 0, IsMobile and 32 or 28)
+CloseBtn.Position = UDim2.new(1, -(IsMobile and 38 or 32), 0, IsMobile and 7 or 11)
 CloseBtn.BackgroundColor3 = C.Vermelho
 CloseBtn.BackgroundTransparency = 0.3
 CloseBtn.BorderSizePixel = 0
 CloseBtn.Text = "✕"
 CloseBtn.TextColor3 = C.Branco
 CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 14
+CloseBtn.TextSize = IsMobile and 16 or 14
 CloseBtn.ZIndex = 10007
 CloseBtn.Parent = Header
 
@@ -434,34 +422,37 @@ local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 6)
 CloseCorner.Parent = CloseBtn
 
--- ═══════════════════════ SISTEMA DE ARRASTO (Mobile + PC) ═══════════════════════
+-- ═══════════════════════ SISTEMA DE ARRASTO CORRIGIDO ═══════════════════════
+-- ⚠️ NOVO SISTEMA DE ARRASTO - FUNCIONA EM MOBILE E PC
 local dragging = false
-local dragStart = nil
-local startPos = nil
+local dragOffset = Vector2.new(0, 0)
+local dragStartPos = nil
 
+-- Função para iniciar arrasto
 local function StartDrag(input)
     dragging = true
-    dragStart = input.Position
-    startPos = Main.Position
+    dragOffset = Vector2.new(
+        input.Position.X - Main.AbsolutePosition.X,
+        input.Position.Y - Main.AbsolutePosition.Y
+    )
+    dragStartPos = Main.Position
 end
 
+-- Função para atualizar arrasto
 local function UpdateDrag(input)
-    if dragging and dragStart then
-        local delta = input.Position - dragStart
-        Main.Position = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y
-        )
+    if dragging then
+        local newX = input.Position.X - dragOffset.X
+        local newY = input.Position.Y - dragOffset.Y
+        Main.Position = UDim2.new(0, newX, 0, newY)
     end
 end
 
+-- Função para finalizar arrasto
 local function EndDrag()
     dragging = false
-    dragStart = nil
-    startPos = nil
 end
 
--- PC Drag
+-- PC Drag - Funciona no Header inteiro
 Header.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         StartDrag(input)
@@ -480,29 +471,32 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- Mobile Drag
+-- Mobile Drag - Touch no Header
 if IsMobile then
-    Header.TouchLongPress:Connect(function(touchPositions)
-        if #touchPositions > 0 then
-            StartDrag({Position = touchPositions[1]})
+    Header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            StartDrag(input)
         end
     end)
     
-    UserInputService.TouchMoved:Connect(function(input, processed)
-        if dragging and not processed then
+    Header.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.Touch then
             UpdateDrag(input)
         end
     end)
     
-    UserInputService.TouchEnded:Connect(function()
-        EndDrag()
+    Header.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            EndDrag()
+        end
     end)
 end
 
 -- ═══════════════════════ SIDEBAR ═══════════════════════
+local SidebarWidth = IsMobile and 90 or 125
 local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, IsMobile and 100 or 125, 1, -60)
-Sidebar.Position = UDim2.new(0, 0, 0, 50)
+Sidebar.Size = UDim2.new(0, SidebarWidth, 1, -(IsMobile and 50 or 60))
+Sidebar.Position = UDim2.new(0, 0, 0, IsMobile and 45 or 50)
 Sidebar.BackgroundColor3 = C.PretoClaro
 Sidebar.BackgroundTransparency = 0.35
 Sidebar.BorderSizePixel = 0
@@ -515,8 +509,8 @@ SidebarCorner.Parent = Sidebar
 
 -- ═══════════════════════ CONTEÚDO ═══════════════════════
 local Content = Instance.new("Frame")
-Content.Size = UDim2.new(1, -(IsMobile and 110 or 135), 1, -60)
-Content.Position = UDim2.new(0, IsMobile and 105 or 130, 0, 55)
+Content.Size = UDim2.new(1, -(SidebarWidth + 10), 1, -(IsMobile and 50 or 60))
+Content.Position = UDim2.new(0, SidebarWidth + 5, 0, IsMobile and 45 or 50)
 Content.BackgroundColor3 = C.PretoMedio
 Content.BackgroundTransparency = 0.45
 Content.BorderSizePixel = 0
@@ -532,17 +526,18 @@ Scroll.Size = UDim2.new(1, -10, 1, -10)
 Scroll.Position = UDim2.new(0, 5, 0, 5)
 Scroll.BackgroundTransparency = 1
 Scroll.BorderSizePixel = 0
-Scroll.ScrollBarThickness = IsMobile and 5 or 3
+Scroll.ScrollBarThickness = IsMobile and 4 or 3
 Scroll.ScrollBarImageColor3 = C.Branco
 Scroll.ScrollBarImageTransparency = 0.8
 Scroll.CanvasSize = UDim2.new(0, 0, 0, 10)
 Scroll.ZIndex = 10006
 Scroll.Parent = Content
 
--- Mobile scroll fix
+-- ⚠️ Mobile scroll fix
 if IsMobile then
     Scroll.ScrollingEnabled = true
     Scroll.ElasticBehavior = Enum.ElasticBehavior.Always
+    Scroll.ScrollBarImageTransparency = 0.6
 end
 
 local ScrollList = Instance.new("UIListLayout")
@@ -565,34 +560,34 @@ local CurrentTab = "Geral"
 local TabButtons = {}
 
 local SidebarList = Instance.new("UIListLayout")
-SidebarList.Padding = UDim.new(0, 4)
+SidebarList.Padding = UDim.new(0, 3)
 SidebarList.SortOrder = Enum.SortOrder.LayoutOrder
 SidebarList.Parent = Sidebar
 
 local SidePad = Instance.new("Frame")
-SidePad.Size = UDim2.new(1, 0, 0, 8)
+SidePad.Size = UDim2.new(1, 0, 0, 6)
 SidePad.BackgroundTransparency = 1
 SidePad.LayoutOrder = 0
 SidePad.Parent = Sidebar
 
 for i, tab in ipairs(Tabs) do
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -10, 0, IsMobile and 30 or 34)
-    btn.Position = UDim2.new(0, 5, 0, 0)
+    btn.Size = UDim2.new(1, -8, 0, IsMobile and 28 or 34)
+    btn.Position = UDim2.new(0, 4, 0, 0)
     btn.BackgroundColor3 = C.PretoMedio
     btn.BackgroundTransparency = 0.55
     btn.BorderSizePixel = 0
-    btn.Text = tab.Icon .. "  " .. tab.Name
+    btn.Text = tab.Icon .. " " .. tab.Name
     btn.TextColor3 = C.Cinza
     btn.Font = Enum.Font.Gotham
-    btn.TextSize = IsMobile and 10 or 11
+    btn.TextSize = IsMobile and 9 or 11
     btn.TextXAlignment = Enum.TextXAlignment.Left
     btn.LayoutOrder = i
     btn.ZIndex = 10006
     btn.Parent = Sidebar
     
     local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.CornerRadius = UDim.new(0, 6)
     btnCorner.Parent = btn
     
     btn.MouseButton1Click:Connect(function()
@@ -633,7 +628,7 @@ end
 
 function Section(text)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 22)
+    frame.Size = UDim2.new(1, 0, 0, 20)
     frame.BackgroundTransparency = 1
     frame.Parent = Scroll
     
@@ -643,7 +638,7 @@ function Section(text)
     l.Text = text
     l.TextColor3 = C.Branco
     l.Font = Enum.Font.GothamBold
-    l.TextSize = 12
+    l.TextSize = IsMobile and 11 or 12
     l.TextXAlignment = Enum.TextXAlignment.Left
     l.ZIndex = 10006
     l.Parent = frame
@@ -656,13 +651,13 @@ function Section(text)
     line.BorderSizePixel = 0
     line.Parent = frame
     
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 24)
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 22)
     return l
 end
 
 function Toggle(text, default, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, IsMobile and 36 or 32)
+    frame.Size = UDim2.new(1, 0, 0, IsMobile and 34 or 32)
     frame.BackgroundColor3 = C.PretoMedio
     frame.BackgroundTransparency = 0.65
     frame.BorderSizePixel = 0
@@ -670,12 +665,12 @@ function Toggle(text, default, callback)
     frame.Parent = Scroll
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = frame
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 200, 1, 0)
-    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Size = UDim2.new(0, 180, 1, 0)
+    label.Position = UDim2.new(0, 8, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = C.BrancoSuave
@@ -686,8 +681,8 @@ function Toggle(text, default, callback)
     label.Parent = frame
     
     local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, IsMobile and 48 or 42, 0, IsMobile and 26 or 22)
-    toggleBtn.Position = UDim2.new(1, -(IsMobile and 56 or 50), 0.5, -(IsMobile and 13 or 11))
+    toggleBtn.Size = UDim2.new(0, IsMobile and 44 or 42, 0, IsMobile and 24 or 22)
+    toggleBtn.Position = UDim2.new(1, -(IsMobile and 50 or 50), 0.5, -(IsMobile and 12 or 11))
     toggleBtn.BackgroundColor3 = default and C.Verde or C.CinzaEscuro
     toggleBtn.BorderSizePixel = 0
     toggleBtn.Text = ""
@@ -699,8 +694,8 @@ function Toggle(text, default, callback)
     btnCorner.Parent = toggleBtn
     
     local dot = Instance.new("Frame")
-    dot.Size = UDim2.new(0, IsMobile and 22 or 18, 0, IsMobile and 22 or 18)
-    dot.Position = default and UDim2.new(1, -(IsMobile and 24 or 20), 0.5, -(IsMobile and 11 or 9)) or UDim2.new(0, 2, 0.5, -(IsMobile and 11 or 9))
+    dot.Size = UDim2.new(0, IsMobile and 20 or 18, 0, IsMobile and 20 or 18)
+    dot.Position = default and UDim2.new(1, -(IsMobile and 22 or 20), 0.5, -(IsMobile and 10 or 9)) or UDim2.new(0, 2, 0.5, -(IsMobile and 10 or 9))
     dot.BackgroundColor3 = C.Branco
     dot.BorderSizePixel = 0
     dot.ZIndex = 10007
@@ -715,20 +710,20 @@ function Toggle(text, default, callback)
     toggleBtn.MouseButton1Click:Connect(function()
         isOn = not isOn
         toggleBtn.BackgroundColor3 = isOn and C.Verde or C.CinzaEscuro
-        dot.Position = isOn and UDim2.new(1, -(IsMobile and 24 or 20), 0.5, -(IsMobile and 11 or 9)) or UDim2.new(0, 2, 0.5, -(IsMobile and 11 or 9))
+        dot.Position = isOn and UDim2.new(1, -(IsMobile and 22 or 20), 0.5, -(IsMobile and 10 or 9)) or UDim2.new(0, 2, 0.5, -(IsMobile and 10 or 9))
         
         if callback then
             callback(isOn)
         end
     end)
     
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 38 or 34))
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 36 or 34))
     return frame
 end
 
 function Slider(text, min, max, default, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, IsMobile and 52 or 48)
+    frame.Size = UDim2.new(1, 0, 0, IsMobile and 50 or 48)
     frame.BackgroundColor3 = C.PretoMedio
     frame.BackgroundTransparency = 0.65
     frame.BorderSizePixel = 0
@@ -736,12 +731,12 @@ function Slider(text, min, max, default, callback)
     frame.Parent = Scroll
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = frame
     
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, -10, 0, 16)
-    label.Position = UDim2.new(0, 10, 0, 3)
+    label.Position = UDim2.new(0, 8, 0, 3)
     label.BackgroundTransparency = 1
     label.Text = text .. ": " .. tostring(default)
     label.TextColor3 = C.BrancoSuave
@@ -752,8 +747,8 @@ function Slider(text, min, max, default, callback)
     label.Parent = frame
     
     local track = Instance.new("Frame")
-    track.Size = UDim2.new(1, -20, 0, IsMobile and 7 or 5)
-    track.Position = UDim2.new(0, 10, 0, IsMobile and 30 or 28)
+    track.Size = UDim2.new(1, -16, 0, IsMobile and 6 or 5)
+    track.Position = UDim2.new(0, 8, 0, IsMobile and 28 or 28)
     track.BackgroundColor3 = C.CinzaEscuro
     track.BorderSizePixel = 0
     track.ZIndex = 10006
@@ -776,8 +771,8 @@ function Slider(text, min, max, default, callback)
     fillCorner.Parent = fill
     
     local thumb = Instance.new("Frame")
-    thumb.Size = UDim2.new(0, IsMobile and 18 or 14, 0, IsMobile and 18 or 14)
-    thumb.Position = UDim2.new((default - min) / (max - min), -(IsMobile and 9 or 7), 0.5, -(IsMobile and 9 or 7))
+    thumb.Size = UDim2.new(0, IsMobile and 16 or 14, 0, IsMobile and 16 or 14)
+    thumb.Position = UDim2.new((default - min) / (max - min), -(IsMobile and 8 or 7), 0.5, -(IsMobile and 8 or 7))
     thumb.BackgroundColor3 = C.Branco
     thumb.BorderSizePixel = 0
     thumb.ZIndex = 10007
@@ -791,13 +786,13 @@ function Slider(text, min, max, default, callback)
     local isDragging = false
     
     thumb.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDragging = true
         end
     end)
     
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDragging = false
             if callback then callback(currentValue) end
         end
@@ -814,18 +809,18 @@ function Slider(text, min, max, default, callback)
             currentValue = math.floor(min + (max - min) * percentage)
             
             fill.Size = UDim2.new(percentage, 0, 1, 0)
-            thumb.Position = UDim2.new(percentage, -(IsMobile and 9 or 7), 0.5, -(IsMobile and 9 or 7))
+            thumb.Position = UDim2.new(percentage, -(IsMobile and 8 or 7), 0.5, -(IsMobile and 8 or 7))
             label.Text = text .. ": " .. tostring(currentValue)
         end
     end)
     
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 54 or 50))
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 52 or 50))
     return frame
 end
 
 function ColorPicker(text, defaultColor, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, IsMobile and 40 or 36)
+    frame.Size = UDim2.new(1, 0, 0, IsMobile and 38 or 36)
     frame.BackgroundColor3 = C.PretoMedio
     frame.BackgroundTransparency = 0.65
     frame.BorderSizePixel = 0
@@ -833,12 +828,12 @@ function ColorPicker(text, defaultColor, callback)
     frame.Parent = Scroll
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = frame
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 180, 1, 0)
-    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Size = UDim2.new(0, 160, 1, 0)
+    label.Position = UDim2.new(0, 8, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = C.BrancoSuave
@@ -849,8 +844,8 @@ function ColorPicker(text, defaultColor, callback)
     label.Parent = frame
     
     local preview = Instance.new("Frame")
-    preview.Size = UDim2.new(0, IsMobile and 28 or 24, 0, IsMobile and 28 or 24)
-    preview.Position = UDim2.new(1, -(IsMobile and 34 or 30), 0.5, -(IsMobile and 14 or 12))
+    preview.Size = UDim2.new(0, IsMobile and 26 or 24, 0, IsMobile and 26 or 24)
+    preview.Position = UDim2.new(1, -(IsMobile and 32 or 30), 0.5, -(IsMobile and 13 or 12))
     preview.BackgroundColor3 = defaultColor
     preview.BorderSizePixel = 0
     preview.ZIndex = 10006
@@ -860,7 +855,7 @@ function ColorPicker(text, defaultColor, callback)
     prevCorner.CornerRadius = UDim.new(0, 6)
     prevCorner.Parent = preview
     
-    -- Paleta de cores expandida
+    -- Paleta de cores
     local Colors = {
         Color3.fromRGB(255, 50, 50), Color3.fromRGB(255, 100, 100),
         Color3.fromRGB(255, 150, 50), Color3.fromRGB(255, 200, 50),
@@ -874,16 +869,13 @@ function ColorPicker(text, defaultColor, callback)
         Color3.fromRGB(255, 0, 0), Color3.fromRGB(0, 255, 0),
         Color3.fromRGB(0, 0, 255), Color3.fromRGB(255, 255, 0),
         Color3.fromRGB(255, 0, 255), Color3.fromRGB(0, 255, 255),
-        Color3.fromRGB(128, 0, 0), Color3.fromRGB(0, 128, 0),
-        Color3.fromRGB(0, 0, 128), Color3.fromRGB(128, 128, 0),
-        Color3.fromRGB(128, 0, 128), Color3.fromRGB(0, 128, 128),
     }
     
     local paletteOpen = false
     local paletteFrame = nil
     
     preview.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             if paletteOpen and paletteFrame then
                 paletteFrame:Destroy()
                 paletteFrame = nil
@@ -894,8 +886,8 @@ function ColorPicker(text, defaultColor, callback)
             paletteOpen = true
             
             paletteFrame = Instance.new("Frame")
-            paletteFrame.Size = UDim2.new(0, IsMobile and 220 or 200, 0, IsMobile and 250 or 190)
-            paletteFrame.Position = UDim2.new(0, 30, 0, 30)
+            paletteFrame.Size = UDim2.new(0, IsMobile and 200 or 200, 0, IsMobile and 220 or 190)
+            paletteFrame.Position = UDim2.new(0, 20, 0, 20)
             paletteFrame.BackgroundColor3 = C.PretoFundo
             paletteFrame.BorderSizePixel = 0
             paletteFrame.ZIndex = 10050
@@ -912,13 +904,13 @@ function ColorPicker(text, defaultColor, callback)
             palStroke.Parent = paletteFrame
             
             local grid = Instance.new("UIGridLayout")
-            grid.CellSize = UDim2.new(0, IsMobile and 32 or 30, 0, IsMobile and 32 or 30)
+            grid.CellSize = UDim2.new(0, IsMobile and 30 or 30, 0, IsMobile and 30 or 30)
             grid.CellPadding = UDim2.new(0, 4, 0, 4)
             grid.Parent = paletteFrame
             
             for _, color in ipairs(Colors) do
                 local colorBtn = Instance.new("TextButton")
-                colorBtn.Size = UDim2.new(0, IsMobile and 32 or 30, 0, IsMobile and 32 or 30)
+                colorBtn.Size = UDim2.new(0, IsMobile and 30 or 30, 0, IsMobile and 30 or 30)
                 colorBtn.BackgroundColor3 = color
                 colorBtn.BorderSizePixel = 0
                 colorBtn.Text = ""
@@ -940,13 +932,13 @@ function ColorPicker(text, defaultColor, callback)
         end
     end)
     
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 42 or 38))
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 40 or 38))
     return frame
 end
 
 function Keybind(text, defaultKey, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, IsMobile and 40 or 36)
+    frame.Size = UDim2.new(1, 0, 0, IsMobile and 38 or 36)
     frame.BackgroundColor3 = C.PretoMedio
     frame.BackgroundTransparency = 0.65
     frame.BorderSizePixel = 0
@@ -954,12 +946,12 @@ function Keybind(text, defaultKey, callback)
     frame.Parent = Scroll
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = frame
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 180, 1, 0)
-    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Size = UDim2.new(0, 160, 1, 0)
+    label.Position = UDim2.new(0, 8, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = C.BrancoSuave
@@ -970,8 +962,8 @@ function Keybind(text, defaultKey, callback)
     label.Parent = frame
     
     local keyBtn = Instance.new("TextButton")
-    keyBtn.Size = UDim2.new(0, IsMobile and 80 or 70, 0, IsMobile and 28 or 24)
-    keyBtn.Position = UDim2.new(1, -(IsMobile and 86 or 76), 0.5, -(IsMobile and 14 or 12))
+    keyBtn.Size = UDim2.new(0, IsMobile and 70 or 70, 0, IsMobile and 26 or 24)
+    keyBtn.Position = UDim2.new(1, -(IsMobile and 76 or 76), 0.5, -(IsMobile and 13 or 12))
     keyBtn.BackgroundColor3 = C.CinzaEscuro
     keyBtn.BackgroundTransparency = 0.3
     keyBtn.BorderSizePixel = 0
@@ -1008,13 +1000,13 @@ function Keybind(text, defaultKey, callback)
         end
     end)
     
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 42 or 38))
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 40 or 38))
     return frame
 end
 
 function Button(text, color, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, IsMobile and 38 or 34)
+    btn.Size = UDim2.new(1, 0, 0, IsMobile and 36 or 34)
     btn.BackgroundColor3 = color or C.Branco
     btn.BackgroundTransparency = 0.85
     btn.BorderSizePixel = 0
@@ -1026,20 +1018,20 @@ function Button(text, color, callback)
     btn.Parent = Scroll
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = btn
     
     btn.MouseButton1Click:Connect(function()
         if callback then callback() end
     end)
     
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 40 or 36))
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 38 or 36))
     return btn
 end
 
 function Dropdown(text, options, default, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, IsMobile and 40 or 36)
+    frame.Size = UDim2.new(1, 0, 0, IsMobile and 38 or 36)
     frame.BackgroundColor3 = C.PretoMedio
     frame.BackgroundTransparency = 0.65
     frame.BorderSizePixel = 0
@@ -1047,12 +1039,12 @@ function Dropdown(text, options, default, callback)
     frame.Parent = Scroll
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = frame
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 180, 1, 0)
-    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Size = UDim2.new(0, 160, 1, 0)
+    label.Position = UDim2.new(0, 8, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = C.BrancoSuave
@@ -1063,8 +1055,8 @@ function Dropdown(text, options, default, callback)
     label.Parent = frame
     
     local dropBtn = Instance.new("TextButton")
-    dropBtn.Size = UDim2.new(0, IsMobile and 80 or 70, 0, IsMobile and 28 or 24)
-    dropBtn.Position = UDim2.new(1, -(IsMobile and 86 or 76), 0.5, -(IsMobile and 14 or 12))
+    dropBtn.Size = UDim2.new(0, IsMobile and 70 or 70, 0, IsMobile and 26 or 24)
+    dropBtn.Position = UDim2.new(1, -(IsMobile and 76 or 76), 0.5, -(IsMobile and 13 or 12))
     dropBtn.BackgroundColor3 = C.CinzaEscuro
     dropBtn.BackgroundTransparency = 0.3
     dropBtn.BorderSizePixel = 0
@@ -1086,11 +1078,11 @@ function Dropdown(text, options, default, callback)
         expanded = not expanded
         
         if expanded then
-            frame.Size = UDim2.new(1, 0, 0, (IsMobile and 40 or 36) + ((IsMobile and 28 or 24) * #options))
+            frame.Size = UDim2.new(1, 0, 0, (IsMobile and 38 or 36) + ((IsMobile and 26 or 24) * #options))
             for i, option in ipairs(options) do
                 local optBtn = Instance.new("TextButton")
-                optBtn.Size = UDim2.new(1, 0, 0, IsMobile and 26 or 24)
-                optBtn.Position = UDim2.new(0, 0, 0, (IsMobile and 40 or 36) + ((IsMobile and 28 or 24) * (i - 1)))
+                optBtn.Size = UDim2.new(1, 0, 0, IsMobile and 24 or 24)
+                optBtn.Position = UDim2.new(0, 0, 0, (IsMobile and 38 or 36) + ((IsMobile and 26 or 24) * (i - 1)))
                 optBtn.BackgroundColor3 = C.PretoMedio
                 optBtn.BackgroundTransparency = 0.5
                 optBtn.BorderSizePixel = 0
@@ -1105,7 +1097,7 @@ function Dropdown(text, options, default, callback)
                 optBtn.MouseButton1Click:Connect(function()
                     dropBtn.Text = option
                     expanded = false
-                    frame.Size = UDim2.new(1, 0, 0, IsMobile and 40 or 36)
+                    frame.Size = UDim2.new(1, 0, 0, IsMobile and 38 or 36)
                     for _, btn in ipairs(optionButtons) do btn:Destroy() end
                     optionButtons = {}
                     if callback then callback(option) end
@@ -1113,21 +1105,21 @@ function Dropdown(text, options, default, callback)
                 table.insert(optionButtons, optBtn)
             end
         else
-            frame.Size = UDim2.new(1, 0, 0, IsMobile and 40 or 36)
+            frame.Size = UDim2.new(1, 0, 0, IsMobile and 38 or 36)
             for _, btn in ipairs(optionButtons) do btn:Destroy() end
             optionButtons = {}
         end
     end)
     
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 42 or 38))
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 40 or 38))
     return frame
 end
 
 -- ═══════════════════════ MONITOR FPS/PING ═══════════════════════
 local StatsDisplay = Instance.new("Frame")
 StatsDisplay.Name = "StatsDisplay"
-StatsDisplay.Size = UDim2.new(0, IsMobile and 160 or 140, 0, IsMobile and 60 or 44)
-StatsDisplay.Position = UDim2.new(1, -(IsMobile and 170 or 150), 0, 10)
+StatsDisplay.Size = UDim2.new(0, IsMobile and 150 or 140, 0, IsMobile and 55 or 44)
+StatsDisplay.Position = UDim2.new(1, -(IsMobile and 160 or 150), 0, 10)
 StatsDisplay.BackgroundColor3 = C.PretoFundo
 StatsDisplay.BackgroundTransparency = 0.2
 StatsDisplay.BorderSizePixel = 0
@@ -1168,10 +1160,9 @@ PingLabel.TextXAlignment = Enum.TextXAlignment.Left
 PingLabel.ZIndex = 10001
 PingLabel.Parent = StatsDisplay
 
--- Monitor extra
 local MemLabel = Instance.new("TextLabel")
 MemLabel.Size = UDim2.new(1, -5, 0, IsMobile and 16 or 18)
-MemLabel.Position = UDim2.new(0, 5, 0, IsMobile and 38 or 44)
+MemLabel.Position = UDim2.new(0, 5, 0, IsMobile and 37 or 44)
 MemLabel.BackgroundTransparency = 1
 MemLabel.Text = "MEM: 0MB"
 MemLabel.TextColor3 = C.Roxo
@@ -1183,7 +1174,6 @@ MemLabel.Visible = false
 MemLabel.Parent = StatsDisplay
 
 -- ═══════════════════════ SISTEMA DE FPS/PING ═══════════════════════
-local lastTime = tick()
 local frameCount = 0
 local currentFPS = 0
 local lastFPSTime = tick()
@@ -1251,7 +1241,6 @@ function UpdateESP()
         local boxColor = isTeam and Config.ESP.TeamBoxColor or Config.ESP.BoxColor
         local nameColor = isTeam and Config.ESP.TeamNameColor or Config.ESP.NameColor
         
-        -- Box (Highlight)
         if Config.ESP.Boxes then
             local highlight = Instance.new("Highlight")
             highlight.FillColor = boxColor
@@ -1264,7 +1253,6 @@ function UpdateESP()
             table.insert(ESPObjects, highlight)
         end
         
-        -- Chams
         if Config.ESP.Chams then
             local chamsHighlight = Instance.new("Highlight")
             chamsHighlight.FillColor = isTeam and Config.ESP.TeamChamsColor or Config.ESP.ChamsColor
@@ -1276,7 +1264,6 @@ function UpdateESP()
             table.insert(ESPObjects, chamsHighlight)
         end
         
-        -- Glow
         if Config.ESP.Glow then
             local glowHighlight = Instance.new("Highlight")
             glowHighlight.FillColor = Config.ESP.GlowColor
@@ -1289,7 +1276,6 @@ function UpdateESP()
             table.insert(ESPObjects, glowHighlight)
         end
         
-        -- Billboard
         if Config.ESP.Names or Config.ESP.HealthBar or Config.ESP.Distance then
             local billboard = Instance.new("BillboardGui")
             billboard.Size = UDim2.new(0, 160, 0, 60)
@@ -1347,7 +1333,6 @@ function UpdateESP()
             end
         end
         
-        -- Tracers
         if Config.ESP.Tracers then
             local tracer = Drawing.new("Line")
             tracer.Thickness = 1.5
@@ -1431,7 +1416,7 @@ end
 
 -- ═══════════════════════ LOOP PRINCIPAL ═══════════════════════
 RunService.RenderStepped:Connect(function()
-    -- Calcular FPS
+    -- FPS
     frameCount = frameCount + 1
     local currentTime = tick()
     
@@ -1468,7 +1453,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
     
-    -- Atualizar FOV Circle
+    -- FOV Circle
     if FOVCircle then
         FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     end
@@ -1487,11 +1472,6 @@ RunService.RenderStepped:Connect(function()
             end
         end
     end
-    
-    -- Crosshair
-    if Config.Visuals.Crosshair then
-        -- Implementar crosshair customizado
-    end
 end)
 
 -- ═══════════════════════ ATUALIZAR CONTEÚDO ═══════════════════════
@@ -1502,28 +1482,28 @@ function UpdateContent()
         Section("🏠 BEM-VINDO")
         
         local infoFrame = Instance.new("Frame")
-        infoFrame.Size = UDim2.new(1, 0, 0, 70)
+        infoFrame.Size = UDim2.new(1, 0, 0, 60)
         infoFrame.BackgroundColor3 = C.PretoMedio
         infoFrame.BackgroundTransparency = 0.6
         infoFrame.BorderSizePixel = 0
         infoFrame.Parent = Scroll
-        Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 8)
+        Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 6)
         
         local infoText = Instance.new("TextLabel")
         infoText.Size = UDim2.new(1, -10, 1, 0)
         infoText.Position = UDim2.new(0, 5, 0, 0)
         infoText.BackgroundTransparency = 1
-        infoText.Text = "⚙ Menu de Configurações v4.0\n" ..
+        infoText.Text = "⚙ Menu v5.0\n" ..
                        (IsMobile and "📱 Modo Mobile" or "💻 Modo PC") .. "\n" ..
                        "✅ Zero bugs • Performance máxima"
         infoText.TextColor3 = C.BrancoSuave
         infoText.Font = Enum.Font.Gotham
-        infoText.TextSize = 11
+        infoText.TextSize = IsMobile and 10 or 11
         infoText.TextXAlignment = Enum.TextXAlignment.Left
         infoText.TextYAlignment = Enum.TextYAlignment.Center
         infoText.Parent = infoFrame
         
-        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 75)
+        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 65)
         
         Section("🔑 ATALHOS")
         Keybind("Tecla do Menu", Config.MenuKey, function(key)
@@ -1531,15 +1511,15 @@ function UpdateContent()
         end)
         
         local keyInfo = Instance.new("TextLabel")
-        keyInfo.Size = UDim2.new(1, 0, 0, 40)
+        keyInfo.Size = UDim2.new(1, 0, 0, 35)
         keyInfo.BackgroundTransparency = 1
-        keyInfo.Text = "Pressione a tecla configurada para\nabrir/fechar o menu rapidamente"
+        keyInfo.Text = "Pressione a tecla para\nabrir/fechar o menu"
         keyInfo.TextColor3 = C.Cinza
         keyInfo.Font = Enum.Font.Gotham
-        keyInfo.TextSize = 10
+        keyInfo.TextSize = IsMobile and 9 or 10
         keyInfo.TextXAlignment = Enum.TextXAlignment.Left
         keyInfo.Parent = Scroll
-        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 42)
+        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 37)
         
     elseif CurrentTab == "ESP" then
         Section("👁 SISTEMA ESP")
@@ -1547,9 +1527,7 @@ function UpdateContent()
             Config.ESP.Enabled = v 
             if not v then
                 for _, obj in pairs(ESPObjects) do
-                    if obj.connection then
-                        obj.connection:Disconnect()
-                    end
+                    if obj.connection then obj.connection:Disconnect() end
                     pcall(function() obj:Destroy() end)
                 end
                 ESPObjects = {}
@@ -1673,15 +1651,15 @@ function UpdateContent()
         Toggle("Mostrar Memória", Config.Monitor.ShowMemory, function(v) Config.Monitor.ShowMemory = v end)
         
         local info = Instance.new("TextLabel")
-        info.Size = UDim2.new(1, 0, 0, 40)
+        info.Size = UDim2.new(1, 0, 0, 35)
         info.BackgroundTransparency = 1
-        info.Text = "📊 Monitor sempre visível no\ncanto superior direito da tela\n✅ Informações em tempo real"
+        info.Text = "📊 Monitor visível no\ncanto superior direito"
         info.TextColor3 = C.Cinza
         info.Font = Enum.Font.Gotham
-        info.TextSize = 10
+        info.TextSize = IsMobile and 9 or 10
         info.TextXAlignment = Enum.TextXAlignment.Left
         info.Parent = Scroll
-        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 42)
+        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 37)
         
     elseif CurrentTab == "Misc" then
         Section("⚡ MISCELÂNEA")
@@ -1699,14 +1677,14 @@ function UpdateContent()
     elseif CurrentTab == "Config" then
         Section("⚙ CONFIGURAÇÕES")
         
-        Button("💾 SALVAR CONFIGURAÇÕES", C.Verde, function()
+        Button("💾 SALVAR", C.Verde, function()
             local success = SaveSystem:Save()
             if success then
-                print("✅ Configurações salvas com sucesso!")
+                print("✅ Configurações salvas!")
             end
         end)
         
-        Button("📂 CARREGAR CONFIGURAÇÕES", C.Azul, function()
+        Button("📂 CARREGAR", C.Azul, function()
             local success = SaveSystem:Load()
             if success then
                 print("✅ Configurações carregadas!")
@@ -1715,7 +1693,7 @@ function UpdateContent()
             end
         end)
         
-        Button("🔄 RESETAR PARA PADRÃO", C.Vermelho, function()
+        Button("🔄 RESETAR", C.Vermelho, function()
             SaveSystem:Reset()
             print("🔄 Configurações resetadas!")
             UpdateContent()
@@ -1724,29 +1702,28 @@ function UpdateContent()
         
         Section("ℹ INFORMAÇÕES")
         local infoFrame = Instance.new("Frame")
-        infoFrame.Size = UDim2.new(1, 0, 0, 80)
+        infoFrame.Size = UDim2.new(1, 0, 0, 70)
         infoFrame.BackgroundColor3 = C.PretoMedio
         infoFrame.BackgroundTransparency = 0.6
         infoFrame.BorderSizePixel = 0
         infoFrame.Parent = Scroll
-        Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 8)
+        Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 6)
         
         local infoText = Instance.new("TextLabel")
         infoText.Size = UDim2.new(1, -10, 1, 0)
         infoText.Position = UDim2.new(0, 5, 0, 0)
         infoText.BackgroundTransparency = 1
-        infoText.Text = "📌 Mateus Scripts v4.0\n" ..
+        infoText.Text = "📌 Mateus Scripts v5.0\n" ..
                        (IsMobile and "📱 Modo Mobile" or "💻 Modo PC") .. "\n" ..
-                       "✅ Zero bugs • Performance máxima\n" ..
-                       "🔑 Tecla personalizável para abrir/fechar"
+                       "✅ Zero bugs • Performance máxima"
         infoText.TextColor3 = C.BrancoSuave
         infoText.Font = Enum.Font.Gotham
-        infoText.TextSize = 10
+        infoText.TextSize = IsMobile and 9 or 10
         infoText.TextXAlignment = Enum.TextXAlignment.Left
         infoText.TextYAlignment = Enum.TextYAlignment.Center
         infoText.Parent = infoFrame
         
-        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 85)
+        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 75)
     end
 end
 
@@ -1813,7 +1790,7 @@ for i = 1, 10 do
 end
 
 print("╔════════════════════════════════════════════╗")
-print("║  ✅ MATEUS_SCRIPTS v4.0                   ║")
+print("║  ✅ MATEUS_SCRIPTS v5.0                   ║")
 print("║  📊 Menu carregado com sucesso!           ║")
 print("║  " .. (IsMobile and "📱 Modo Mobile" or "💻 Modo PC") .. "          ║")
 print("║  📌 Zero bugs • Performance máxima        ║")
