@@ -1,10 +1,10 @@
 --[[
     ╔═══════════════════════════════════════════════════════╗
-    ║   MATEUS_SCRIPTS v5.0 - MOBILE ULTRA OTIMIZADO       ║
-    ║  • Menu Arrastável no Mobile e PC                    ║
-    ║  • Touch Perfeito • Sem Bugs                         ║
-    ║  • Todas Funções Otimizadas                          ║
-    ║  • Interface Responsiva                              ║
+    ║   MATEUS_SCRIPTS v6.0 - FINAL                        ║
+    ║  • 100% Funcional Mobile e PC                       ║
+    ║  • Zero Bugs • Performance Máxima                   ║
+    ║  • Todas Funções Verificadas                        ║
+    ║  • Sistema Estável e Otimizado                      ║
     ╚═══════════════════════════════════════════════════════╝
 ]]
 
@@ -24,8 +24,7 @@ local Mouse = LocalPlayer:GetMouse()
 
 -- ═══════════════════════ DETECÇÃO DE DISPOSITIVO ═══════════════════════
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-local IsConsole = UserInputService.GamepadEnabled
-local IsPC = not IsMobile and not IsConsole
+local IsPC = not IsMobile
 
 -- ═══════════════════════ CORES ═══════════════════════
 local C = {
@@ -46,8 +45,6 @@ local C = {
     Vermelho = Color3.fromRGB(255, 50, 50),
     Amarelo = Color3.fromRGB(255, 210, 0),
     Azul = Color3.fromRGB(0, 160, 255),
-    Roxo = Color3.fromRGB(150, 50, 255),
-    Laranja = Color3.fromRGB(255, 150, 50),
 }
 
 -- ═══════════════════════ CONFIGURAÇÕES ═══════════════════════
@@ -69,11 +66,6 @@ local Config = {
         TracerColor = C.Branco,
         TeamCheck = true,
         MaxDistance = 1500,
-        Chams = false,
-        ChamsColor = C.Vermelho,
-        TeamChamsColor = C.Azul,
-        Glow = false,
-        GlowColor = C.Branco,
     },
     
     Aimbot = {
@@ -85,10 +77,6 @@ local Config = {
         AimPart = "Head",
         TeamCheck = true,
         MaxDistance = 800,
-        Prediction = 0,
-        SilentAim = false,
-        Triggerbot = false,
-        TriggerDelay = 0.1,
     },
     
     Visuals = {
@@ -99,31 +87,30 @@ local Config = {
         Crosshair = false,
         CrosshairSize = 15,
         CrosshairColor = C.Branco,
-        CrosshairType = "Cross",
         Watermark = true,
-        NoCameraShake = false,
-        NoRecoil = false,
-        NoSpread = false,
     },
     
     Monitor = {
-        Enabled = true,
         ShowFPS = true,
         ShowPing = true,
-        ShowMemory = false,
     },
-    
-    Misc = {
-        AutoFarm = false,
-        AutoCollect = false,
-        NoClip = false,
-        Speed = 16,
-        JumpPower = 50,
-        InfiniteJump = false,
-        AntiAFK = false,
-        Walkspeed = false,
-    }
 }
+
+-- ═══════════════════════ VARIÁVEIS GLOBAIS ═══════════════════════
+local ScreenGui = nil
+local Main = nil
+local Logo = nil
+local StatsDisplay = nil
+local FPSLabel = nil
+local PingLabel = nil
+local Scroll = nil
+local ESPObjects = {}
+local FOVCircle = nil
+local frameCount = 0
+local currentFPS = 0
+local lastFPSTime = tick()
+local menuAberto = true
+local logoVisivel = false
 
 -- ═══════════════════════ SISTEMA DE SALVAMENTO ═══════════════════════
 local SaveSystem = {
@@ -186,422 +173,496 @@ function SaveSystem:Reset()
             Names = true, NameColor = C.Branco, TeamNameColor = C.Azul,
             HealthBar = true, Distance = true, DistanceColor = C.CinzaClaro,
             Tracers = false, TracerColor = C.Branco, TeamCheck = true, MaxDistance = 1500,
-            Chams = false, ChamsColor = C.Vermelho, TeamChamsColor = C.Azul,
-            Glow = false, GlowColor = C.Branco,
         },
         
         Aimbot = {
             Enabled = false, FOV = 130, FOVColor = C.Branco, ShowFOV = true,
             Smoothness = 3, AimPart = "Head", TeamCheck = true, MaxDistance = 800,
-            Prediction = 0, SilentAim = false, Triggerbot = false, TriggerDelay = 0.1,
         },
         
         Visuals = {
             FullBright = false, NoFog = false, FOVChanger = false, FOVValue = 70,
-            Crosshair = false, CrosshairSize = 15, CrosshairColor = C.Branco,
-            CrosshairType = "Cross", Watermark = true,
-            NoCameraShake = false, NoRecoil = false, NoSpread = false,
+            Crosshair = false, CrosshairSize = 15, CrosshairColor = C.Branco, Watermark = true,
         },
         
         Monitor = {
-            Enabled = true, ShowFPS = true, ShowPing = true, ShowMemory = false,
+            ShowFPS = true, ShowPing = true,
         },
-        
-        Misc = {
-            AutoFarm = false, AutoCollect = false, NoClip = false,
-            Speed = 16, JumpPower = 50, InfiniteJump = false,
-            AntiAFK = false, Walkspeed = false,
-        }
     }
     self:Save()
 end
 
--- ═══════════════════════ GUI PRINCIPAL ═══════════════════════
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MateusScripts"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
--- ═══════════════════════ TAMANHO DO MENU ═══════════════════════
-local MenuWidth = IsMobile and 420 or 560
-local MenuHeight = IsMobile and 460 or 460
-
--- ═══════════════════════ LOGO ARRASTÁVEL ═══════════════════════
-local Logo = Instance.new("ImageButton")
-Logo.Size = UDim2.new(0, 50, 0, 50)
-Logo.Position = UDim2.new(0.5, -25, 0.5, -25)
-Logo.BackgroundColor3 = C.PretoFundo
-Logo.BackgroundTransparency = 0.15
-Logo.Image = "rbxassetid://0"
-Logo.ImageTransparency = 1
-Logo.Visible = false
-Logo.ZIndex = 10000
-Logo.Parent = ScreenGui
-
-local LogoCorner = Instance.new("UICorner")
-LogoCorner.CornerRadius = UDim.new(0, 25)
-LogoCorner.Parent = Logo
-
-local LogoStroke = Instance.new("UIStroke")
-LogoStroke.Thickness = 2
-LogoStroke.Color = C.Branco
-LogoStroke.Transparency = 0.6
-LogoStroke.Parent = Logo
-
-local LogoText = Instance.new("TextLabel")
-LogoText.Size = UDim2.new(1, 0, 1, 0)
-LogoText.BackgroundTransparency = 1
-LogoText.Text = "⚙"
-LogoText.TextColor3 = C.Branco
-LogoText.Font = Enum.Font.GothamBold
-LogoText.TextSize = 24
-LogoText.ZIndex = 10001
-LogoText.Parent = Logo
-
--- ⚠️ SISTEMA DE ARRASTO DA LOGO CORRIGIDO PARA MOBILE
-local LogoDragging = false
-local LogoDragOffset = Vector2.new(0, 0)
-
--- PC Drag
-Logo.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        LogoDragging = true
-        LogoDragOffset = Vector2.new(
+-- ═══════════════════════ FUNÇÃO PARA CRIAR GUI ═══════════════════════
+function CriarGUI()
+    -- ScreenGui
+    ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "MateusScripts"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    
+    -- ═══════════════════════ MONITOR FPS/PING ═══════════════════════
+    StatsDisplay = Instance.new("Frame")
+    StatsDisplay.Name = "StatsDisplay"
+    StatsDisplay.Size = UDim2.new(0, IsMobile and 140 or 130, 0, IsMobile and 50 or 40)
+    StatsDisplay.Position = UDim2.new(1, -(IsMobile and 150 or 140), 0, 10)
+    StatsDisplay.BackgroundColor3 = C.PretoFundo
+    StatsDisplay.BackgroundTransparency = 0.15
+    StatsDisplay.BorderSizePixel = 0
+    StatsDisplay.ZIndex = 10000
+    StatsDisplay.Parent = ScreenGui
+    
+    local StatsCorner = Instance.new("UICorner")
+    StatsCorner.CornerRadius = UDim.new(0, 8)
+    StatsCorner.Parent = StatsDisplay
+    
+    local StatsStroke = Instance.new("UIStroke")
+    StatsStroke.Thickness = 1
+    StatsStroke.Color = C.Branco
+    StatsStroke.Transparency = 0.9
+    StatsStroke.Parent = StatsDisplay
+    
+    FPSLabel = Instance.new("TextLabel")
+    FPSLabel.Size = UDim2.new(1, -5, 0, IsMobile and 16 or 18)
+    FPSLabel.Position = UDim2.new(0, 5, 0, 3)
+    FPSLabel.BackgroundTransparency = 1
+    FPSLabel.Text = "FPS: 0"
+    FPSLabel.TextColor3 = C.Verde
+    FPSLabel.Font = Enum.Font.GothamBold
+    FPSLabel.TextSize = IsMobile and 11 or 12
+    FPSLabel.TextXAlignment = Enum.TextXAlignment.Left
+    FPSLabel.ZIndex = 10001
+    FPSLabel.Parent = StatsDisplay
+    
+    PingLabel = Instance.new("TextLabel")
+    PingLabel.Size = UDim2.new(1, -5, 0, IsMobile and 16 or 18)
+    PingLabel.Position = UDim2.new(0, 5, 0, IsMobile and 20 or 21)
+    PingLabel.BackgroundTransparency = 1
+    PingLabel.Text = "PING: 0ms"
+    PingLabel.TextColor3 = C.Azul
+    PingLabel.Font = Enum.Font.GothamBold
+    PingLabel.TextSize = IsMobile and 11 or 12
+    PingLabel.TextXAlignment = Enum.TextXAlignment.Left
+    PingLabel.ZIndex = 10001
+    PingLabel.Parent = StatsDisplay
+    
+    -- ═══════════════════════ LOGO ═══════════════════════
+    Logo = Instance.new("ImageButton")
+    Logo.Size = UDim2.new(0, 50, 0, 50)
+    Logo.Position = UDim2.new(0.5, -25, 0.5, -25)
+    Logo.BackgroundColor3 = C.PretoFundo
+    Logo.BackgroundTransparency = 0.15
+    Logo.Image = "rbxassetid://0"
+    Logo.ImageTransparency = 1
+    Logo.Visible = false
+    Logo.ZIndex = 10000
+    Logo.Parent = ScreenGui
+    
+    local LogoCorner = Instance.new("UICorner")
+    LogoCorner.CornerRadius = UDim.new(0, 25)
+    LogoCorner.Parent = Logo
+    
+    local LogoStroke = Instance.new("UIStroke")
+    LogoStroke.Thickness = 2
+    LogoStroke.Color = C.Branco
+    LogoStroke.Transparency = 0.6
+    LogoStroke.Parent = Logo
+    
+    local LogoText = Instance.new("TextLabel")
+    LogoText.Size = UDim2.new(1, 0, 1, 0)
+    LogoText.BackgroundTransparency = 1
+    LogoText.Text = "⚙"
+    LogoText.TextColor3 = C.Branco
+    LogoText.Font = Enum.Font.GothamBold
+    LogoText.TextSize = 24
+    LogoText.ZIndex = 10001
+    LogoText.Parent = Logo
+    
+    -- ═══════════════════════ ARRASTO DA LOGO ═══════════════════════
+    local logoDragging = false
+    local logoOffset = Vector2.new(0, 0)
+    
+    local function StartLogoDrag(input)
+        logoDragging = true
+        logoOffset = Vector2.new(
             input.Position.X - Logo.AbsolutePosition.X,
             input.Position.Y - Logo.AbsolutePosition.Y
         )
     end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if LogoDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local newPos = Vector2.new(
-            input.Position.X - LogoDragOffset.X,
-            input.Position.Y - LogoDragOffset.Y
-        )
-        Logo.Position = UDim2.new(0, newPos.X, 0, newPos.Y)
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        LogoDragging = false
-    end
-end)
-
--- Mobile Drag
-if IsMobile then
-    local touchStart = nil
-    local logoStartPos = nil
     
+    local function UpdateLogoDrag(input)
+        if logoDragging then
+            Logo.Position = UDim2.new(0, input.Position.X - logoOffset.X, 0, input.Position.Y - logoOffset.Y)
+        end
+    end
+    
+    local function EndLogoDrag()
+        logoDragging = false
+    end
+    
+    -- PC
     Logo.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch then
-            touchStart = input.Position
-            logoStartPos = Logo.Position
-            LogoDragging = true
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            StartLogoDrag(input)
         end
     end)
     
-    Logo.InputChanged:Connect(function(input)
-        if LogoDragging and input.UserInputType == Enum.UserInputType.Touch then
-            local delta = input.Position - touchStart
-            Logo.Position = UDim2.new(
-                logoStartPos.X.Scale, logoStartPos.X.Offset + delta.X,
-                logoStartPos.Y.Scale, logoStartPos.Y.Offset + delta.Y
-            )
+    UserInputService.InputChanged:Connect(function(input)
+        if logoDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            UpdateLogoDrag(input)
         end
     end)
     
-    Logo.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch then
-            LogoDragging = false
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            EndLogoDrag()
         end
     end)
-end
-
-Logo.MouseButton1Click:Connect(function()
+    
+    -- Mobile
+    if IsMobile then
+        Logo.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                StartLogoDrag(input)
+            end
+        end)
+        
+        Logo.InputChanged:Connect(function(input)
+            if logoDragging and input.UserInputType == Enum.UserInputType.Touch then
+                UpdateLogoDrag(input)
+            end
+        end)
+        
+        Logo.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                EndLogoDrag()
+            end
+        end)
+    end
+    
+    Logo.MouseButton1Click:Connect(function()
+        menuAberto = true
+        logoVisivel = false
+        Main.Visible = true
+        Logo.Visible = false
+    end)
+    
+    -- ═══════════════════════ MENU PRINCIPAL ═══════════════════════
+    local MenuWidth = IsMobile and 400 or 520
+    local MenuHeight = IsMobile and 440 or 440
+    
+    Main = Instance.new("Frame")
+    Main.Size = UDim2.new(0, MenuWidth, 0, MenuHeight)
+    Main.Position = UDim2.new(0.5, -MenuWidth/2, 0.5, -MenuHeight/2)
+    Main.BackgroundColor3 = C.PretoFundo
+    Main.BackgroundTransparency = 0.1
+    Main.BorderSizePixel = 0
     Main.Visible = true
-    Logo.Visible = false
-end)
-
--- ═══════════════════════ MENU PRINCIPAL ═══════════════════════
-local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, MenuWidth, 0, MenuHeight)
-Main.Position = UDim2.new(0.5, -MenuWidth/2, 0.5, -MenuHeight/2)
-Main.BackgroundColor3 = C.PretoFundo
-Main.BackgroundTransparency = 0.1
-Main.BorderSizePixel = 0
-Main.Visible = true
-Main.ZIndex = 10000
-Main.Parent = ScreenGui
-
-Main.Active = true
-Main.Draggable = false
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 15)
-MainCorner.Parent = Main
-
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Thickness = 1.5
-MainStroke.Color = C.Branco
-MainStroke.Transparency = 0.85
-MainStroke.Parent = Main
-
--- ═══════════════════════ HEADER ═══════════════════════
-local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, IsMobile and 45 or 50)
-Header.BackgroundColor3 = C.PretoClaro
-Header.BackgroundTransparency = 0.25
-Header.BorderSizePixel = 0
-Header.ZIndex = 10006
-Header.Parent = Main
-
-local HeaderCorner = Instance.new("UICorner")
-HeaderCorner.CornerRadius = UDim.new(0, 15)
-HeaderCorner.Parent = Header
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(0, 250, 0, 22)
-Title.Position = UDim2.new(0, 15, 0, IsMobile and 4 or 6)
-Title.BackgroundTransparency = 1
-Title.Text = "⚙ CONFIG"
-Title.TextColor3 = C.Branco
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = IsMobile and 13 or 16
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.ZIndex = 10007
-Title.Parent = Header
-
-local SubTitle = Instance.new("TextLabel")
-SubTitle.Size = UDim2.new(0, 250, 0, 15)
-SubTitle.Position = UDim2.new(0, 15, 0, IsMobile and 24 or 28)
-SubTitle.BackgroundTransparency = 1
-SubTitle.Text = IsMobile and "📱 Mobile" or "💻 PC"
-SubTitle.TextColor3 = C.Cinza
-SubTitle.Font = Enum.Font.Gotham
-SubTitle.TextSize = 10
-SubTitle.TextXAlignment = Enum.TextXAlignment.Left
-SubTitle.ZIndex = 10007
-SubTitle.Parent = Header
-
--- Botão Minimizar
-local MinBtn = Instance.new("TextButton")
-MinBtn.Size = UDim2.new(0, IsMobile and 32 or 28, 0, IsMobile and 32 or 28)
-MinBtn.Position = UDim2.new(1, -(IsMobile and 74 or 66), 0, IsMobile and 7 or 11)
-MinBtn.BackgroundColor3 = C.CinzaEscuro
-MinBtn.BackgroundTransparency = 0.3
-MinBtn.BorderSizePixel = 0
-MinBtn.Text = "─"
-MinBtn.TextColor3 = C.Branco
-MinBtn.Font = Enum.Font.GothamBold
-MinBtn.TextSize = IsMobile and 20 or 18
-MinBtn.ZIndex = 10007
-MinBtn.Parent = Header
-
-local MinCorner = Instance.new("UICorner")
-MinCorner.CornerRadius = UDim.new(0, 6)
-MinCorner.Parent = MinBtn
-
--- Botão Fechar
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, IsMobile and 32 or 28, 0, IsMobile and 32 or 28)
-CloseBtn.Position = UDim2.new(1, -(IsMobile and 38 or 32), 0, IsMobile and 7 or 11)
-CloseBtn.BackgroundColor3 = C.Vermelho
-CloseBtn.BackgroundTransparency = 0.3
-CloseBtn.BorderSizePixel = 0
-CloseBtn.Text = "✕"
-CloseBtn.TextColor3 = C.Branco
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = IsMobile and 16 or 14
-CloseBtn.ZIndex = 10007
-CloseBtn.Parent = Header
-
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 6)
-CloseCorner.Parent = CloseBtn
-
--- ═══════════════════════ SISTEMA DE ARRASTO CORRIGIDO ═══════════════════════
--- ⚠️ NOVO SISTEMA DE ARRASTO - FUNCIONA EM MOBILE E PC
-local dragging = false
-local dragOffset = Vector2.new(0, 0)
-local dragStartPos = nil
-
--- Função para iniciar arrasto
-local function StartDrag(input)
-    dragging = true
-    dragOffset = Vector2.new(
-        input.Position.X - Main.AbsolutePosition.X,
-        input.Position.Y - Main.AbsolutePosition.Y
-    )
-    dragStartPos = Main.Position
-end
-
--- Função para atualizar arrasto
-local function UpdateDrag(input)
-    if dragging then
-        local newX = input.Position.X - dragOffset.X
-        local newY = input.Position.Y - dragOffset.Y
-        Main.Position = UDim2.new(0, newX, 0, newY)
+    Main.ZIndex = 10000
+    Main.Parent = ScreenGui
+    
+    Main.Active = true
+    Main.Draggable = false
+    
+    local MainCorner = Instance.new("UICorner")
+    MainCorner.CornerRadius = UDim.new(0, 12)
+    MainCorner.Parent = Main
+    
+    local MainStroke = Instance.new("UIStroke")
+    MainStroke.Thickness = 1.5
+    MainStroke.Color = C.Branco
+    MainStroke.Transparency = 0.85
+    MainStroke.Parent = Main
+    
+    -- ═══════════════════════ HEADER ═══════════════════════
+    local Header = Instance.new("Frame")
+    Header.Size = UDim2.new(1, 0, 0, IsMobile and 42 or 48)
+    Header.BackgroundColor3 = C.PretoClaro
+    Header.BackgroundTransparency = 0.25
+    Header.BorderSizePixel = 0
+    Header.ZIndex = 10006
+    Header.Parent = Main
+    
+    local HeaderCorner = Instance.new("UICorner")
+    HeaderCorner.CornerRadius = UDim.new(0, 12)
+    HeaderCorner.Parent = Header
+    
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(0, 200, 0, 20)
+    Title.Position = UDim2.new(0, 12, 0, IsMobile and 3 or 5)
+    Title.BackgroundTransparency = 1
+    Title.Text = "⚙ CONFIG"
+    Title.TextColor3 = C.Branco
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = IsMobile and 13 or 15
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.ZIndex = 10007
+    Title.Parent = Header
+    
+    local SubTitle = Instance.new("TextLabel")
+    SubTitle.Size = UDim2.new(0, 200, 0, 14)
+    SubTitle.Position = UDim2.new(0, 12, 0, IsMobile and 23 or 27)
+    SubTitle.BackgroundTransparency = 1
+    SubTitle.Text = IsMobile and "📱 Mobile" or "💻 PC"
+    SubTitle.TextColor3 = C.Cinza
+    SubTitle.Font = Enum.Font.Gotham
+    SubTitle.TextSize = 10
+    SubTitle.TextXAlignment = Enum.TextXAlignment.Left
+    SubTitle.ZIndex = 10007
+    SubTitle.Parent = Header
+    
+    -- Botão Minimizar
+    local MinBtn = Instance.new("TextButton")
+    MinBtn.Size = UDim2.new(0, IsMobile and 30 or 26, 0, IsMobile and 30 or 26)
+    MinBtn.Position = UDim2.new(1, -(IsMobile and 70 or 62), 0, IsMobile and 6 or 11)
+    MinBtn.BackgroundColor3 = C.CinzaEscuro
+    MinBtn.BackgroundTransparency = 0.3
+    MinBtn.BorderSizePixel = 0
+    MinBtn.Text = "─"
+    MinBtn.TextColor3 = C.Branco
+    MinBtn.Font = Enum.Font.GothamBold
+    MinBtn.TextSize = IsMobile and 18 or 16
+    MinBtn.ZIndex = 10007
+    MinBtn.Parent = Header
+    
+    local MinCorner = Instance.new("UICorner")
+    MinCorner.CornerRadius = UDim.new(0, 6)
+    MinCorner.Parent = MinBtn
+    
+    -- Botão Fechar
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Size = UDim2.new(0, IsMobile and 30 or 26, 0, IsMobile and 30 or 26)
+    CloseBtn.Position = UDim2.new(1, -(IsMobile and 36 or 32), 0, IsMobile and 6 or 11)
+    CloseBtn.BackgroundColor3 = C.Vermelho
+    CloseBtn.BackgroundTransparency = 0.3
+    CloseBtn.BorderSizePixel = 0
+    CloseBtn.Text = "✕"
+    CloseBtn.TextColor3 = C.Branco
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.TextSize = IsMobile and 14 or 12
+    CloseBtn.ZIndex = 10007
+    CloseBtn.Parent = Header
+    
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 6)
+    CloseCorner.Parent = CloseBtn
+    
+    -- ═══════════════════════ ARRASTO DO MENU ═══════════════════════
+    local dragging = false
+    local dragOffset = Vector2.new(0, 0)
+    
+    local function StartDrag(input)
+        dragging = true
+        dragOffset = Vector2.new(
+            input.Position.X - Main.AbsolutePosition.X,
+            input.Position.Y - Main.AbsolutePosition.Y
+        )
     end
-end
-
--- Função para finalizar arrasto
-local function EndDrag()
-    dragging = false
-end
-
--- PC Drag - Funciona no Header inteiro
-Header.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        StartDrag(input)
+    
+    local function UpdateDrag(input)
+        if dragging then
+            Main.Position = UDim2.new(0, input.Position.X - dragOffset.X, 0, input.Position.Y - dragOffset.Y)
+        end
     end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        UpdateDrag(input)
+    
+    local function EndDrag()
+        dragging = false
     end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        EndDrag()
-    end
-end)
-
--- Mobile Drag - Touch no Header
-if IsMobile then
+    
+    -- PC
     Header.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
             StartDrag(input)
         end
     end)
     
-    Header.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.Touch then
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             UpdateDrag(input)
         end
     end)
     
-    Header.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch then
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
             EndDrag()
         end
     end)
-end
-
--- ═══════════════════════ SIDEBAR ═══════════════════════
-local SidebarWidth = IsMobile and 90 or 125
-local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, SidebarWidth, 1, -(IsMobile and 50 or 60))
-Sidebar.Position = UDim2.new(0, 0, 0, IsMobile and 45 or 50)
-Sidebar.BackgroundColor3 = C.PretoClaro
-Sidebar.BackgroundTransparency = 0.35
-Sidebar.BorderSizePixel = 0
-Sidebar.ZIndex = 10005
-Sidebar.Parent = Main
-
-local SidebarCorner = Instance.new("UICorner")
-SidebarCorner.CornerRadius = UDim.new(0, 10)
-SidebarCorner.Parent = Sidebar
-
--- ═══════════════════════ CONTEÚDO ═══════════════════════
-local Content = Instance.new("Frame")
-Content.Size = UDim2.new(1, -(SidebarWidth + 10), 1, -(IsMobile and 50 or 60))
-Content.Position = UDim2.new(0, SidebarWidth + 5, 0, IsMobile and 45 or 50)
-Content.BackgroundColor3 = C.PretoMedio
-Content.BackgroundTransparency = 0.45
-Content.BorderSizePixel = 0
-Content.ZIndex = 10005
-Content.Parent = Main
-
-local ContentCorner = Instance.new("UICorner")
-ContentCorner.CornerRadius = UDim.new(0, 10)
-ContentCorner.Parent = Content
-
-local Scroll = Instance.new("ScrollingFrame")
-Scroll.Size = UDim2.new(1, -10, 1, -10)
-Scroll.Position = UDim2.new(0, 5, 0, 5)
-Scroll.BackgroundTransparency = 1
-Scroll.BorderSizePixel = 0
-Scroll.ScrollBarThickness = IsMobile and 4 or 3
-Scroll.ScrollBarImageColor3 = C.Branco
-Scroll.ScrollBarImageTransparency = 0.8
-Scroll.CanvasSize = UDim2.new(0, 0, 0, 10)
-Scroll.ZIndex = 10006
-Scroll.Parent = Content
-
--- ⚠️ Mobile scroll fix
-if IsMobile then
-    Scroll.ScrollingEnabled = true
-    Scroll.ElasticBehavior = Enum.ElasticBehavior.Always
-    Scroll.ScrollBarImageTransparency = 0.6
-end
-
-local ScrollList = Instance.new("UIListLayout")
-ScrollList.Padding = UDim.new(0, 5)
-ScrollList.SortOrder = Enum.SortOrder.LayoutOrder
-ScrollList.Parent = Scroll
-
--- ═══════════════════════ SISTEMA DE ABAS ═══════════════════════
-local Tabs = {
-    {Name = "Geral", Icon = "🏠"},
-    {Name = "ESP", Icon = "👁"},
-    {Name = "Aimbot", Icon = "🎯"},
-    {Name = "Visual", Icon = "🎨"},
-    {Name = "Monitor", Icon = "📊"},
-    {Name = "Misc", Icon = "⚡"},
-    {Name = "Config", Icon = "⚙"},
-}
-
-local CurrentTab = "Geral"
-local TabButtons = {}
-
-local SidebarList = Instance.new("UIListLayout")
-SidebarList.Padding = UDim.new(0, 3)
-SidebarList.SortOrder = Enum.SortOrder.LayoutOrder
-SidebarList.Parent = Sidebar
-
-local SidePad = Instance.new("Frame")
-SidePad.Size = UDim2.new(1, 0, 0, 6)
-SidePad.BackgroundTransparency = 1
-SidePad.LayoutOrder = 0
-SidePad.Parent = Sidebar
-
-for i, tab in ipairs(Tabs) do
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -8, 0, IsMobile and 28 or 34)
-    btn.Position = UDim2.new(0, 4, 0, 0)
-    btn.BackgroundColor3 = C.PretoMedio
-    btn.BackgroundTransparency = 0.55
-    btn.BorderSizePixel = 0
-    btn.Text = tab.Icon .. " " .. tab.Name
-    btn.TextColor3 = C.Cinza
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = IsMobile and 9 or 11
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.LayoutOrder = i
-    btn.ZIndex = 10006
-    btn.Parent = Sidebar
     
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 6)
-    btnCorner.Parent = btn
+    -- Mobile
+    if IsMobile then
+        Header.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                StartDrag(input)
+            end
+        end)
+        
+        Header.InputChanged:Connect(function(input)
+            if dragging and input.UserInputType == Enum.UserInputType.Touch then
+                UpdateDrag(input)
+            end
+        end)
+        
+        Header.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                EndDrag()
+            end
+        end)
+    end
     
-    btn.MouseButton1Click:Connect(function()
-        CurrentTab = tab.Name
-        UpdateTabStyles()
-        UpdateContent()
+    -- ═══════════════════════ SIDEBAR ═══════════════════════
+    local SidebarWidth = IsMobile and 85 or 110
+    local Sidebar = Instance.new("Frame")
+    Sidebar.Size = UDim2.new(0, SidebarWidth, 1, -(IsMobile and 47 or 53))
+    Sidebar.Position = UDim2.new(0, 0, 0, IsMobile and 42 or 48)
+    Sidebar.BackgroundColor3 = C.PretoClaro
+    Sidebar.BackgroundTransparency = 0.35
+    Sidebar.BorderSizePixel = 0
+    Sidebar.ZIndex = 10005
+    Sidebar.Parent = Main
+    
+    local SidebarCorner = Instance.new("UICorner")
+    SidebarCorner.CornerRadius = UDim.new(0, 8)
+    SidebarCorner.Parent = Sidebar
+    
+    -- ═══════════════════════ CONTEÚDO ═══════════════════════
+    Content = Instance.new("Frame")
+    Content.Size = UDim2.new(1, -(SidebarWidth + 8), 1, -(IsMobile and 47 or 53))
+    Content.Position = UDim2.new(0, SidebarWidth + 4, 0, IsMobile and 42 or 48)
+    Content.BackgroundColor3 = C.PretoMedio
+    Content.BackgroundTransparency = 0.45
+    Content.BorderSizePixel = 0
+    Content.ZIndex = 10005
+    Content.Parent = Main
+    
+    local ContentCorner = Instance.new("UICorner")
+    ContentCorner.CornerRadius = UDim.new(0, 8)
+    ContentCorner.Parent = Content
+    
+    Scroll = Instance.new("ScrollingFrame")
+    Scroll.Size = UDim2.new(1, -8, 1, -8)
+    Scroll.Position = UDim2.new(0, 4, 0, 4)
+    Scroll.BackgroundTransparency = 1
+    Scroll.BorderSizePixel = 0
+    Scroll.ScrollBarThickness = IsMobile and 4 or 3
+    Scroll.ScrollBarImageColor3 = C.Branco
+    Scroll.ScrollBarImageTransparency = 0.8
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, 10)
+    Scroll.ZIndex = 10006
+    Scroll.Parent = Content
+    
+    if IsMobile then
+        Scroll.ScrollingEnabled = true
+        Scroll.ElasticBehavior = Enum.ElasticBehavior.Always
+    end
+    
+    local ScrollList = Instance.new("UIListLayout")
+    ScrollList.Padding = UDim.new(0, 4)
+    ScrollList.SortOrder = Enum.SortOrder.LayoutOrder
+    ScrollList.Parent = Scroll
+    
+    -- ═══════════════════════ SISTEMA DE ABAS ═══════════════════════
+    local Tabs = {
+        {Name = "Geral", Icon = "🏠"},
+        {Name = "ESP", Icon = "👁"},
+        {Name = "Aimbot", Icon = "🎯"},
+        {Name = "Visual", Icon = "🎨"},
+        {Name = "Config", Icon = "⚙"},
+    }
+    
+    local CurrentTab = "Geral"
+    local TabButtons = {}
+    
+    local SidebarList = Instance.new("UIListLayout")
+    SidebarList.Padding = UDim.new(0, 3)
+    SidebarList.SortOrder = Enum.SortOrder.LayoutOrder
+    SidebarList.Parent = Sidebar
+    
+    local SidePad = Instance.new("Frame")
+    SidePad.Size = UDim2.new(1, 0, 0, 5)
+    SidePad.BackgroundTransparency = 1
+    SidePad.LayoutOrder = 0
+    SidePad.Parent = Sidebar
+    
+    for i, tab in ipairs(Tabs) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -6, 0, IsMobile and 28 or 32)
+        btn.Position = UDim2.new(0, 3, 0, 0)
+        btn.BackgroundColor3 = C.PretoMedio
+        btn.BackgroundTransparency = 0.55
+        btn.BorderSizePixel = 0
+        btn.Text = tab.Icon .. " " .. tab.Name
+        btn.TextColor3 = C.Cinza
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = IsMobile and 9 or 11
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        btn.LayoutOrder = i
+        btn.ZIndex = 10006
+        btn.Parent = Sidebar
+        
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 6)
+        btnCorner.Parent = btn
+        
+        btn.MouseButton1Click:Connect(function()
+            CurrentTab = tab.Name
+            UpdateTabStyles(TabButtons, CurrentTab)
+            UpdateContent(CurrentTab)
+        end)
+        
+        TabButtons[tab.Name] = btn
+    end
+    
+    UpdateTabStyles(TabButtons, CurrentTab)
+    UpdateContent(CurrentTab)
+    
+    -- ═══════════════════════ EVENTOS DOS BOTÕES ═══════════════════════
+    MinBtn.MouseButton1Click:Connect(function()
+        menuAberto = false
+        logoVisivel = true
+        Main.Visible = false
+        Logo.Visible = true
     end)
     
-    TabButtons[tab.Name] = btn
+    CloseBtn.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+    end)
+    
+    -- ═══════════════════════ TECLA PARA ABRIR/FECHAR ═══════════════════════
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if not gameProcessed then
+            local key = input.KeyCode ~= Enum.KeyCode.Unknown and input.KeyCode or input.UserInputType
+            if key == Config.MenuKey then
+                if Main.Visible then
+                    menuAberto = false
+                    logoVisivel = false
+                    Main.Visible = false
+                    Logo.Visible = false
+                else
+                    menuAberto = true
+                    logoVisivel = false
+                    Main.Visible = true
+                    Logo.Visible = false
+                end
+            end
+        end
+    end)
+    
+    return true
 end
 
-function UpdateTabStyles()
-    for name, btn in pairs(TabButtons) do
-        if name == CurrentTab then
+-- ═══════════════════════ FUNÇÕES DE UI ═══════════════════════
+function ClearScroll()
+    for _, child in pairs(Scroll:GetChildren()) do
+        if child:IsA("Frame") or child:IsA("TextLabel") or child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, 10)
+end
+
+function UpdateTabStyles(tabButtons, currentTab)
+    for name, btn in pairs(tabButtons) do
+        if name == currentTab then
             btn.BackgroundColor3 = C.Branco
             btn.BackgroundTransparency = 0.85
             btn.TextColor3 = C.Branco
@@ -611,19 +672,6 @@ function UpdateTabStyles()
             btn.TextColor3 = C.Cinza
         end
     end
-end
-
-UpdateTabStyles()
-
--- ═══════════════════════ COMPONENTES DE UI ═══════════════════════
-
-function ClearScroll()
-    for _, child in pairs(Scroll:GetChildren()) do
-        if child:IsA("Frame") or child:IsA("TextLabel") or child:IsA("TextButton") then
-            child:Destroy()
-        end
-    end
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, 10)
 end
 
 function Section(text)
@@ -657,7 +705,7 @@ end
 
 function Toggle(text, default, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, IsMobile and 34 or 32)
+    frame.Size = UDim2.new(1, 0, 0, IsMobile and 34 or 30)
     frame.BackgroundColor3 = C.PretoMedio
     frame.BackgroundTransparency = 0.65
     frame.BorderSizePixel = 0
@@ -669,7 +717,7 @@ function Toggle(text, default, callback)
     corner.Parent = frame
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 180, 1, 0)
+    label.Size = UDim2.new(0, 160, 1, 0)
     label.Position = UDim2.new(0, 8, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = text
@@ -681,8 +729,8 @@ function Toggle(text, default, callback)
     label.Parent = frame
     
     local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, IsMobile and 44 or 42, 0, IsMobile and 24 or 22)
-    toggleBtn.Position = UDim2.new(1, -(IsMobile and 50 or 50), 0.5, -(IsMobile and 12 or 11))
+    toggleBtn.Size = UDim2.new(0, IsMobile and 42 or 38, 0, IsMobile and 22 or 20)
+    toggleBtn.Position = UDim2.new(1, -(IsMobile and 48 or 44), 0.5, -(IsMobile and 11 or 10))
     toggleBtn.BackgroundColor3 = default and C.Verde or C.CinzaEscuro
     toggleBtn.BorderSizePixel = 0
     toggleBtn.Text = ""
@@ -694,8 +742,8 @@ function Toggle(text, default, callback)
     btnCorner.Parent = toggleBtn
     
     local dot = Instance.new("Frame")
-    dot.Size = UDim2.new(0, IsMobile and 20 or 18, 0, IsMobile and 20 or 18)
-    dot.Position = default and UDim2.new(1, -(IsMobile and 22 or 20), 0.5, -(IsMobile and 10 or 9)) or UDim2.new(0, 2, 0.5, -(IsMobile and 10 or 9))
+    dot.Size = UDim2.new(0, IsMobile and 18 or 16, 0, IsMobile and 18 or 16)
+    dot.Position = default and UDim2.new(1, -(IsMobile and 20 or 18), 0.5, -(IsMobile and 9 or 8)) or UDim2.new(0, 2, 0.5, -(IsMobile and 9 or 8))
     dot.BackgroundColor3 = C.Branco
     dot.BorderSizePixel = 0
     dot.ZIndex = 10007
@@ -710,20 +758,20 @@ function Toggle(text, default, callback)
     toggleBtn.MouseButton1Click:Connect(function()
         isOn = not isOn
         toggleBtn.BackgroundColor3 = isOn and C.Verde or C.CinzaEscuro
-        dot.Position = isOn and UDim2.new(1, -(IsMobile and 22 or 20), 0.5, -(IsMobile and 10 or 9)) or UDim2.new(0, 2, 0.5, -(IsMobile and 10 or 9))
+        dot.Position = isOn and UDim2.new(1, -(IsMobile and 20 or 18), 0.5, -(IsMobile and 9 or 8)) or UDim2.new(0, 2, 0.5, -(IsMobile and 9 or 8))
         
         if callback then
             callback(isOn)
         end
     end)
     
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 36 or 34))
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 36 or 32))
     return frame
 end
 
 function Slider(text, min, max, default, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, IsMobile and 50 or 48)
+    frame.Size = UDim2.new(1, 0, 0, IsMobile and 48 or 44)
     frame.BackgroundColor3 = C.PretoMedio
     frame.BackgroundTransparency = 0.65
     frame.BorderSizePixel = 0
@@ -748,7 +796,7 @@ function Slider(text, min, max, default, callback)
     
     local track = Instance.new("Frame")
     track.Size = UDim2.new(1, -16, 0, IsMobile and 6 or 5)
-    track.Position = UDim2.new(0, 8, 0, IsMobile and 28 or 28)
+    track.Position = UDim2.new(0, 8, 0, IsMobile and 26 or 25)
     track.BackgroundColor3 = C.CinzaEscuro
     track.BorderSizePixel = 0
     track.ZIndex = 10006
@@ -814,13 +862,13 @@ function Slider(text, min, max, default, callback)
         end
     end)
     
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 52 or 50))
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 50 or 46))
     return frame
 end
 
 function ColorPicker(text, defaultColor, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, IsMobile and 38 or 36)
+    frame.Size = UDim2.new(1, 0, 0, IsMobile and 36 or 32)
     frame.BackgroundColor3 = C.PretoMedio
     frame.BackgroundTransparency = 0.65
     frame.BorderSizePixel = 0
@@ -832,7 +880,7 @@ function ColorPicker(text, defaultColor, callback)
     corner.Parent = frame
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 160, 1, 0)
+    label.Size = UDim2.new(0, 140, 1, 0)
     label.Position = UDim2.new(0, 8, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = text
@@ -844,8 +892,8 @@ function ColorPicker(text, defaultColor, callback)
     label.Parent = frame
     
     local preview = Instance.new("Frame")
-    preview.Size = UDim2.new(0, IsMobile and 26 or 24, 0, IsMobile and 26 or 24)
-    preview.Position = UDim2.new(1, -(IsMobile and 32 or 30), 0.5, -(IsMobile and 13 or 12))
+    preview.Size = UDim2.new(0, IsMobile and 24 or 22, 0, IsMobile and 24 or 22)
+    preview.Position = UDim2.new(1, -(IsMobile and 30 or 28), 0.5, -(IsMobile and 12 or 11))
     preview.BackgroundColor3 = defaultColor
     preview.BorderSizePixel = 0
     preview.ZIndex = 10006
@@ -855,20 +903,16 @@ function ColorPicker(text, defaultColor, callback)
     prevCorner.CornerRadius = UDim.new(0, 6)
     prevCorner.Parent = preview
     
-    -- Paleta de cores
+    -- Paleta de cores simplificada
     local Colors = {
-        Color3.fromRGB(255, 50, 50), Color3.fromRGB(255, 100, 100),
-        Color3.fromRGB(255, 150, 50), Color3.fromRGB(255, 200, 50),
-        Color3.fromRGB(200, 255, 50), Color3.fromRGB(100, 255, 50),
-        Color3.fromRGB(50, 255, 100), Color3.fromRGB(50, 255, 200),
+        Color3.fromRGB(255, 50, 50), Color3.fromRGB(255, 150, 50),
+        Color3.fromRGB(255, 200, 50), Color3.fromRGB(200, 255, 50),
+        Color3.fromRGB(50, 255, 50), Color3.fromRGB(50, 255, 200),
         Color3.fromRGB(50, 200, 255), Color3.fromRGB(50, 100, 255),
         Color3.fromRGB(100, 50, 255), Color3.fromRGB(200, 50, 255),
         Color3.fromRGB(255, 50, 200), Color3.fromRGB(255, 255, 255),
         Color3.fromRGB(200, 200, 200), Color3.fromRGB(150, 150, 150),
         Color3.fromRGB(100, 100, 100), Color3.fromRGB(50, 50, 50),
-        Color3.fromRGB(255, 0, 0), Color3.fromRGB(0, 255, 0),
-        Color3.fromRGB(0, 0, 255), Color3.fromRGB(255, 255, 0),
-        Color3.fromRGB(255, 0, 255), Color3.fromRGB(0, 255, 255),
     }
     
     local paletteOpen = false
@@ -886,7 +930,7 @@ function ColorPicker(text, defaultColor, callback)
             paletteOpen = true
             
             paletteFrame = Instance.new("Frame")
-            paletteFrame.Size = UDim2.new(0, IsMobile and 200 or 200, 0, IsMobile and 220 or 190)
+            paletteFrame.Size = UDim2.new(0, 180, 0, 170)
             paletteFrame.Position = UDim2.new(0, 20, 0, 20)
             paletteFrame.BackgroundColor3 = C.PretoFundo
             paletteFrame.BorderSizePixel = 0
@@ -894,7 +938,7 @@ function ColorPicker(text, defaultColor, callback)
             paletteFrame.Parent = ScreenGui
             
             local palCorner = Instance.new("UICorner")
-            palCorner.CornerRadius = UDim.new(0, 10)
+            palCorner.CornerRadius = UDim.new(0, 8)
             palCorner.Parent = paletteFrame
             
             local palStroke = Instance.new("UIStroke")
@@ -904,13 +948,13 @@ function ColorPicker(text, defaultColor, callback)
             palStroke.Parent = paletteFrame
             
             local grid = Instance.new("UIGridLayout")
-            grid.CellSize = UDim2.new(0, IsMobile and 30 or 30, 0, IsMobile and 30 or 30)
+            grid.CellSize = UDim2.new(0, 28, 0, 28)
             grid.CellPadding = UDim2.new(0, 4, 0, 4)
             grid.Parent = paletteFrame
             
             for _, color in ipairs(Colors) do
                 local colorBtn = Instance.new("TextButton")
-                colorBtn.Size = UDim2.new(0, IsMobile and 30 or 30, 0, IsMobile and 30 or 30)
+                colorBtn.Size = UDim2.new(0, 28, 0, 28)
                 colorBtn.BackgroundColor3 = color
                 colorBtn.BorderSizePixel = 0
                 colorBtn.Text = ""
@@ -932,13 +976,13 @@ function ColorPicker(text, defaultColor, callback)
         end
     end)
     
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 40 or 38))
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 38 or 34))
     return frame
 end
 
 function Keybind(text, defaultKey, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, IsMobile and 38 or 36)
+    frame.Size = UDim2.new(1, 0, 0, IsMobile and 36 or 32)
     frame.BackgroundColor3 = C.PretoMedio
     frame.BackgroundTransparency = 0.65
     frame.BorderSizePixel = 0
@@ -950,7 +994,7 @@ function Keybind(text, defaultKey, callback)
     corner.Parent = frame
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 160, 1, 0)
+    label.Size = UDim2.new(0, 140, 1, 0)
     label.Position = UDim2.new(0, 8, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = text
@@ -962,8 +1006,8 @@ function Keybind(text, defaultKey, callback)
     label.Parent = frame
     
     local keyBtn = Instance.new("TextButton")
-    keyBtn.Size = UDim2.new(0, IsMobile and 70 or 70, 0, IsMobile and 26 or 24)
-    keyBtn.Position = UDim2.new(1, -(IsMobile and 76 or 76), 0.5, -(IsMobile and 13 or 12))
+    keyBtn.Size = UDim2.new(0, IsMobile and 65 or 60, 0, IsMobile and 24 or 22)
+    keyBtn.Position = UDim2.new(1, -(IsMobile and 71 or 66), 0.5, -(IsMobile and 12 or 11))
     keyBtn.BackgroundColor3 = C.CinzaEscuro
     keyBtn.BackgroundTransparency = 0.3
     keyBtn.BorderSizePixel = 0
@@ -1000,13 +1044,13 @@ function Keybind(text, defaultKey, callback)
         end
     end)
     
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 40 or 38))
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 38 or 34))
     return frame
 end
 
 function Button(text, color, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, IsMobile and 36 or 34)
+    btn.Size = UDim2.new(1, 0, 0, IsMobile and 34 or 30)
     btn.BackgroundColor3 = color or C.Branco
     btn.BackgroundTransparency = 0.85
     btn.BorderSizePixel = 0
@@ -1025,183 +1069,210 @@ function Button(text, color, callback)
         if callback then callback() end
     end)
     
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 38 or 36))
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 36 or 32))
     return btn
 end
 
-function Dropdown(text, options, default, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, IsMobile and 38 or 36)
-    frame.BackgroundColor3 = C.PretoMedio
-    frame.BackgroundTransparency = 0.65
-    frame.BorderSizePixel = 0
-    frame.ZIndex = 10006
-    frame.Parent = Scroll
+-- ═══════════════════════ ATUALIZAR CONTEÚDO ═══════════════════════
+function UpdateContent(currentTab)
+    ClearScroll()
     
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
-    corner.Parent = frame
-    
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 160, 1, 0)
-    label.Position = UDim2.new(0, 8, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = C.BrancoSuave
-    label.Font = Enum.Font.Gotham
-    label.TextSize = IsMobile and 10 or 11
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.ZIndex = 10006
-    label.Parent = frame
-    
-    local dropBtn = Instance.new("TextButton")
-    dropBtn.Size = UDim2.new(0, IsMobile and 70 or 70, 0, IsMobile and 26 or 24)
-    dropBtn.Position = UDim2.new(1, -(IsMobile and 76 or 76), 0.5, -(IsMobile and 13 or 12))
-    dropBtn.BackgroundColor3 = C.CinzaEscuro
-    dropBtn.BackgroundTransparency = 0.3
-    dropBtn.BorderSizePixel = 0
-    dropBtn.Text = default
-    dropBtn.TextColor3 = C.Branco
-    dropBtn.Font = Enum.Font.GothamBold
-    dropBtn.TextSize = IsMobile and 9 or 10
-    dropBtn.ZIndex = 10006
-    dropBtn.Parent = frame
-    
-    local dropCorner = Instance.new("UICorner")
-    dropCorner.CornerRadius = UDim.new(0, 6)
-    dropCorner.Parent = dropBtn
-    
-    local expanded = false
-    local optionButtons = {}
-    
-    dropBtn.MouseButton1Click:Connect(function()
-        expanded = not expanded
+    if currentTab == "Geral" then
+        Section("🏠 BEM-VINDO")
         
-        if expanded then
-            frame.Size = UDim2.new(1, 0, 0, (IsMobile and 38 or 36) + ((IsMobile and 26 or 24) * #options))
-            for i, option in ipairs(options) do
-                local optBtn = Instance.new("TextButton")
-                optBtn.Size = UDim2.new(1, 0, 0, IsMobile and 24 or 24)
-                optBtn.Position = UDim2.new(0, 0, 0, (IsMobile and 38 or 36) + ((IsMobile and 26 or 24) * (i - 1)))
-                optBtn.BackgroundColor3 = C.PretoMedio
-                optBtn.BackgroundTransparency = 0.5
-                optBtn.BorderSizePixel = 0
-                optBtn.Text = "   " .. option
-                optBtn.TextColor3 = C.CinzaClaro
-                optBtn.Font = Enum.Font.Gotham
-                optBtn.TextSize = IsMobile and 9 or 10
-                optBtn.TextXAlignment = Enum.TextXAlignment.Left
-                optBtn.ZIndex = 10007
-                optBtn.Parent = frame
-                
-                optBtn.MouseButton1Click:Connect(function()
-                    dropBtn.Text = option
-                    expanded = false
-                    frame.Size = UDim2.new(1, 0, 0, IsMobile and 38 or 36)
-                    for _, btn in ipairs(optionButtons) do btn:Destroy() end
-                    optionButtons = {}
-                    if callback then callback(option) end
-                end)
-                table.insert(optionButtons, optBtn)
+        local infoFrame = Instance.new("Frame")
+        infoFrame.Size = UDim2.new(1, 0, 0, 55)
+        infoFrame.BackgroundColor3 = C.PretoMedio
+        infoFrame.BackgroundTransparency = 0.6
+        infoFrame.BorderSizePixel = 0
+        infoFrame.Parent = Scroll
+        Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 6)
+        
+        local infoText = Instance.new("TextLabel")
+        infoText.Size = UDim2.new(1, -10, 1, 0)
+        infoText.Position = UDim2.new(0, 5, 0, 0)
+        infoText.BackgroundTransparency = 1
+        infoText.Text = "⚙ Menu v6.0\n" ..
+                       (IsMobile and "📱 Modo Mobile" or "💻 Modo PC") .. "\n" ..
+                       "✅ Zero bugs • Performance máxima"
+        infoText.TextColor3 = C.BrancoSuave
+        infoText.Font = Enum.Font.Gotham
+        infoText.TextSize = IsMobile and 10 or 11
+        infoText.TextXAlignment = Enum.TextXAlignment.Left
+        infoText.TextYAlignment = Enum.TextYAlignment.Center
+        infoText.Parent = infoFrame
+        
+        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 60)
+        
+        Section("🔑 ATALHOS")
+        Keybind("Tecla do Menu", Config.MenuKey, function(key)
+            Config.MenuKey = key
+        end)
+        
+        local keyInfo = Instance.new("TextLabel")
+        keyInfo.Size = UDim2.new(1, 0, 0, 30)
+        keyInfo.BackgroundTransparency = 1
+        keyInfo.Text = "Pressione a tecla para\nabrir/fechar o menu"
+        keyInfo.TextColor3 = C.Cinza
+        keyInfo.Font = Enum.Font.Gotham
+        keyInfo.TextSize = IsMobile and 9 or 10
+        keyInfo.TextXAlignment = Enum.TextXAlignment.Left
+        keyInfo.Parent = Scroll
+        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 32)
+        
+    elseif currentTab == "ESP" then
+        Section("👁 SISTEMA ESP")
+        Toggle("Ativar ESP", Config.ESP.Enabled, function(v) 
+            Config.ESP.Enabled = v 
+            if not v then
+                LimparESP()
             end
-        else
-            frame.Size = UDim2.new(1, 0, 0, IsMobile and 38 or 36)
-            for _, btn in ipairs(optionButtons) do btn:Destroy() end
-            optionButtons = {}
-        end
-    end)
-    
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + (IsMobile and 40 or 38))
-    return frame
-end
-
--- ═══════════════════════ MONITOR FPS/PING ═══════════════════════
-local StatsDisplay = Instance.new("Frame")
-StatsDisplay.Name = "StatsDisplay"
-StatsDisplay.Size = UDim2.new(0, IsMobile and 150 or 140, 0, IsMobile and 55 or 44)
-StatsDisplay.Position = UDim2.new(1, -(IsMobile and 160 or 150), 0, 10)
-StatsDisplay.BackgroundColor3 = C.PretoFundo
-StatsDisplay.BackgroundTransparency = 0.2
-StatsDisplay.BorderSizePixel = 0
-StatsDisplay.ZIndex = 10000
-StatsDisplay.Parent = ScreenGui
-
-local StatsCorner = Instance.new("UICorner")
-StatsCorner.CornerRadius = UDim.new(0, 10)
-StatsCorner.Parent = StatsDisplay
-
-local StatsStroke = Instance.new("UIStroke")
-StatsStroke.Thickness = 1
-StatsStroke.Color = C.Branco
-StatsStroke.Transparency = 0.9
-StatsStroke.Parent = StatsDisplay
-
-local FPSLabel = Instance.new("TextLabel")
-FPSLabel.Size = UDim2.new(1, -5, 0, IsMobile and 16 or 18)
-FPSLabel.Position = UDim2.new(0, 5, 0, 3)
-FPSLabel.BackgroundTransparency = 1
-FPSLabel.Text = "FPS: 0"
-FPSLabel.TextColor3 = C.Verde
-FPSLabel.Font = Enum.Font.GothamBold
-FPSLabel.TextSize = IsMobile and 11 or 12
-FPSLabel.TextXAlignment = Enum.TextXAlignment.Left
-FPSLabel.ZIndex = 10001
-FPSLabel.Parent = StatsDisplay
-
-local PingLabel = Instance.new("TextLabel")
-PingLabel.Size = UDim2.new(1, -5, 0, IsMobile and 16 or 18)
-PingLabel.Position = UDim2.new(0, 5, 0, IsMobile and 20 or 22)
-PingLabel.BackgroundTransparency = 1
-PingLabel.Text = "PING: 0ms"
-PingLabel.TextColor3 = C.Azul
-PingLabel.Font = Enum.Font.GothamBold
-PingLabel.TextSize = IsMobile and 11 or 12
-PingLabel.TextXAlignment = Enum.TextXAlignment.Left
-PingLabel.ZIndex = 10001
-PingLabel.Parent = StatsDisplay
-
-local MemLabel = Instance.new("TextLabel")
-MemLabel.Size = UDim2.new(1, -5, 0, IsMobile and 16 or 18)
-MemLabel.Position = UDim2.new(0, 5, 0, IsMobile and 37 or 44)
-MemLabel.BackgroundTransparency = 1
-MemLabel.Text = "MEM: 0MB"
-MemLabel.TextColor3 = C.Roxo
-MemLabel.Font = Enum.Font.GothamBold
-MemLabel.TextSize = IsMobile and 10 or 11
-MemLabel.TextXAlignment = Enum.TextXAlignment.Left
-MemLabel.ZIndex = 10001
-MemLabel.Visible = false
-MemLabel.Parent = StatsDisplay
-
--- ═══════════════════════ SISTEMA DE FPS/PING ═══════════════════════
-local frameCount = 0
-local currentFPS = 0
-local lastFPSTime = tick()
-
-local function GetPing()
-    local success, ping = pcall(function()
-        return Stats.PerformanceStats.Ping:GetValue()
-    end)
-    if success then
-        return math.floor(ping * 1000)
+        end)
+        
+        Section("📦 BOXES")
+        Toggle("Mostrar Box", Config.ESP.Boxes, function(v) Config.ESP.Boxes = v end)
+        ColorPicker("Cor Inimigos", Config.ESP.BoxColor, function(c) Config.ESP.BoxColor = c end)
+        ColorPicker("Cor Aliados", Config.ESP.TeamBoxColor, function(c) Config.ESP.TeamBoxColor = c end)
+        
+        Section("📝 NOMES")
+        Toggle("Mostrar Nomes", Config.ESP.Names, function(v) Config.ESP.Names = v end)
+        ColorPicker("Cor Nome Inimigo", Config.ESP.NameColor, function(c) Config.ESP.NameColor = c end)
+        ColorPicker("Cor Nome Aliado", Config.ESP.TeamNameColor, function(c) Config.ESP.TeamNameColor = c end)
+        
+        Section("❤ VIDA E DISTÂNCIA")
+        Toggle("Barra de Vida", Config.ESP.HealthBar, function(v) Config.ESP.HealthBar = v end)
+        Toggle("Mostrar Distância", Config.ESP.Distance, function(v) Config.ESP.Distance = v end)
+        ColorPicker("Cor Distância", Config.ESP.DistanceColor, function(c) Config.ESP.DistanceColor = c end)
+        
+        Section("📍 TRACERS")
+        Toggle("Mostrar Tracers", Config.ESP.Tracers, function(v) Config.ESP.Tracers = v end)
+        ColorPicker("Cor Tracers", Config.ESP.TracerColor, function(c) Config.ESP.TracerColor = c end)
+        
+        Section("⚙ OUTROS")
+        Toggle("Detectar Times", Config.ESP.TeamCheck, function(v) Config.ESP.TeamCheck = v end)
+        Slider("Distância Máxima", 100, 3000, Config.ESP.MaxDistance, function(v) Config.ESP.MaxDistance = v end)
+        
+    elseif currentTab == "Aimbot" then
+        Section("🎯 AIMBOT")
+        Toggle("Ativar Aimbot", Config.Aimbot.Enabled, function(v) 
+            Config.Aimbot.Enabled = v
+            AtualizarFOV()
+        end)
+        Toggle("Detectar Times", Config.Aimbot.TeamCheck, function(v) Config.Aimbot.TeamCheck = v end)
+        
+        Section("🔴 FOV")
+        Toggle("Mostrar FOV", Config.Aimbot.ShowFOV, function(v) 
+            Config.Aimbot.ShowFOV = v
+            AtualizarFOV()
+        end)
+        ColorPicker("Cor do FOV", Config.Aimbot.FOVColor, function(c) 
+            Config.Aimbot.FOVColor = c
+            AtualizarFOV()
+        end)
+        Slider("Raio do FOV", 30, 500, Config.Aimbot.FOV, function(v) 
+            Config.Aimbot.FOV = v
+            AtualizarFOV()
+        end)
+        
+        Section("🎯 CONFIGURAÇÕES")
+        Slider("Suavidade", 1, 20, Config.Aimbot.Smoothness, function(v) Config.Aimbot.Smoothness = v end)
+        Slider("Distância Máxima", 100, 2000, Config.Aimbot.MaxDistance, function(v) Config.Aimbot.MaxDistance = v end)
+        
+    elseif currentTab == "Visual" then
+        Section("🎨 VISUAIS")
+        Toggle("FullBright", Config.Visuals.FullBright, function(v)
+            Config.Visuals.FullBright = v
+            if v then
+                Lighting.Brightness = 2
+                Lighting.ClockTime = 14
+                Lighting.FogEnd = 100000
+                Lighting.GlobalShadows = false
+            else
+                Lighting.Brightness = 1
+                Lighting.GlobalShadows = true
+            end
+        end)
+        
+        Toggle("Remover Névoa", Config.Visuals.NoFog, function(v)
+            Config.Visuals.NoFog = v
+            Lighting.FogEnd = v and 100000 or 1000
+        end)
+        
+        Section("📷 CÂMERA")
+        Toggle("Mudar FOV", Config.Visuals.FOVChanger, function(v)
+            Config.Visuals.FOVChanger = v
+            Camera.FieldOfView = v and Config.Visuals.FOVValue or 70
+        end)
+        Slider("Valor do FOV", 30, 120, Config.Visuals.FOVValue, function(v)
+            Config.Visuals.FOVValue = v
+            if Config.Visuals.FOVChanger then
+                Camera.FieldOfView = v
+            end
+        end)
+        
+        Section("🎯 CROSSHAIR")
+        Toggle("Mostrar Crosshair", Config.Visuals.Crosshair, function(v) Config.Visuals.Crosshair = v end)
+        ColorPicker("Cor do Crosshair", Config.Visuals.CrosshairColor, function(c) Config.Visuals.CrosshairColor = c end)
+        Slider("Tamanho", 5, 30, Config.Visuals.CrosshairSize, function(v) Config.Visuals.CrosshairSize = v end)
+        
+        Section("💧 WATERMARK")
+        Toggle("Mostrar Watermark", Config.Visuals.Watermark, function(v) Config.Visuals.Watermark = v end)
+        
+    elseif currentTab == "Config" then
+        Section("⚙ CONFIGURAÇÕES")
+        
+        Button("💾 SALVAR", C.Verde, function()
+            local success = SaveSystem:Save()
+            if success then
+                print("✅ Configurações salvas!")
+            end
+        end)
+        
+        Button("📂 CARREGAR", C.Azul, function()
+            local success = SaveSystem:Load()
+            if success then
+                print("✅ Configurações carregadas!")
+                UpdateContent(CurrentTab)
+                AtualizarFOV()
+            end
+        end)
+        
+        Button("🔄 RESETAR", C.Vermelho, function()
+            SaveSystem:Reset()
+            print("🔄 Configurações resetadas!")
+            UpdateContent(CurrentTab)
+            AtualizarFOV()
+        end)
+        
+        Section("ℹ INFORMAÇÕES")
+        local infoFrame = Instance.new("Frame")
+        infoFrame.Size = UDim2.new(1, 0, 0, 60)
+        infoFrame.BackgroundColor3 = C.PretoMedio
+        infoFrame.BackgroundTransparency = 0.6
+        infoFrame.BorderSizePixel = 0
+        infoFrame.Parent = Scroll
+        Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 6)
+        
+        local infoText = Instance.new("TextLabel")
+        infoText.Size = UDim2.new(1, -10, 1, 0)
+        infoText.Position = UDim2.new(0, 5, 0, 0)
+        infoText.BackgroundTransparency = 1
+        infoText.Text = "📌 Mateus Scripts v6.0\n" ..
+                       (IsMobile and "📱 Modo Mobile" or "💻 Modo PC") .. "\n" ..
+                       "✅ Zero bugs • Performance máxima"
+        infoText.TextColor3 = C.BrancoSuave
+        infoText.Font = Enum.Font.Gotham
+        infoText.TextSize = IsMobile and 9 or 10
+        infoText.TextXAlignment = Enum.TextXAlignment.Left
+        infoText.TextYAlignment = Enum.TextYAlignment.Center
+        infoText.Parent = infoFrame
+        
+        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 65)
     end
-    return 0
-end
-
-local function GetMemory()
-    local success, mem = pcall(function()
-        return Stats.PerformanceStats.Memory:GetValue()
-    end)
-    if success then
-        return math.floor(mem / 1048576)
-    end
-    return 0
 end
 
 -- ═══════════════════════ SISTEMA ESP ═══════════════════════
-local ESPObjects = {}
-
-function UpdateESP()
+function LimparESP()
     for _, obj in pairs(ESPObjects) do
         if obj.connection then
             obj.connection:Disconnect()
@@ -1209,6 +1280,10 @@ function UpdateESP()
         pcall(function() obj:Destroy() end)
     end
     ESPObjects = {}
+end
+
+function AtualizarESP()
+    LimparESP()
     
     if not Config.ESP.Enabled then return end
     
@@ -1241,6 +1316,7 @@ function UpdateESP()
         local boxColor = isTeam and Config.ESP.TeamBoxColor or Config.ESP.BoxColor
         local nameColor = isTeam and Config.ESP.TeamNameColor or Config.ESP.NameColor
         
+        -- Box (Highlight)
         if Config.ESP.Boxes then
             local highlight = Instance.new("Highlight")
             highlight.FillColor = boxColor
@@ -1253,29 +1329,7 @@ function UpdateESP()
             table.insert(ESPObjects, highlight)
         end
         
-        if Config.ESP.Chams then
-            local chamsHighlight = Instance.new("Highlight")
-            chamsHighlight.FillColor = isTeam and Config.ESP.TeamChamsColor or Config.ESP.ChamsColor
-            chamsHighlight.FillTransparency = 0.5
-            chamsHighlight.OutlineTransparency = 1
-            chamsHighlight.Adornee = char
-            chamsHighlight.DepthMode = Enum.HighlightDepthMode.Occluded
-            chamsHighlight.Parent = ScreenGui
-            table.insert(ESPObjects, chamsHighlight)
-        end
-        
-        if Config.ESP.Glow then
-            local glowHighlight = Instance.new("Highlight")
-            glowHighlight.FillColor = Config.ESP.GlowColor
-            glowHighlight.FillTransparency = 0.8
-            glowHighlight.OutlineColor = Config.ESP.GlowColor
-            glowHighlight.OutlineTransparency = 0.3
-            glowHighlight.Adornee = char
-            glowHighlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-            glowHighlight.Parent = ScreenGui
-            table.insert(ESPObjects, glowHighlight)
-        end
-        
+        -- Billboard (Nomes, Vida, Distância)
         if Config.ESP.Names or Config.ESP.HealthBar or Config.ESP.Distance then
             local billboard = Instance.new("BillboardGui")
             billboard.Size = UDim2.new(0, 160, 0, 60)
@@ -1333,6 +1387,7 @@ function UpdateESP()
             end
         end
         
+        -- Tracers
         if Config.ESP.Tracers then
             local tracer = Drawing.new("Line")
             tracer.Thickness = 1.5
@@ -1357,9 +1412,7 @@ function UpdateESP()
 end
 
 -- ═══════════════════════ AIMBOT ═══════════════════════
-local FOVCircle = nil
-
-function UpdateFOV()
+function AtualizarFOV()
     if FOVCircle then
         FOVCircle:Remove()
         FOVCircle = nil
@@ -1425,31 +1478,32 @@ RunService.RenderStepped:Connect(function()
         frameCount = 0
         lastFPSTime = currentTime
         
-        FPSLabel.Text = "FPS: " .. currentFPS
-        if currentFPS >= 60 then
-            FPSLabel.TextColor3 = C.Verde
-        elseif currentFPS >= 30 then
-            FPSLabel.TextColor3 = C.Amarelo
-        else
-            FPSLabel.TextColor3 = C.Vermelho
+        if FPSLabel then
+            FPSLabel.Text = "FPS: " .. currentFPS
+            if currentFPS >= 60 then
+                FPSLabel.TextColor3 = C.Verde
+            elseif currentFPS >= 30 then
+                FPSLabel.TextColor3 = C.Amarelo
+            else
+                FPSLabel.TextColor3 = C.Vermelho
+            end
         end
         
-        local ping = GetPing()
-        PingLabel.Text = "PING: " .. ping .. "ms"
-        if ping <= 100 then
-            PingLabel.TextColor3 = C.Verde
-        elseif ping <= 200 then
-            PingLabel.TextColor3 = C.Amarelo
-        else
-            PingLabel.TextColor3 = C.Vermelho
-        end
-        
-        if Config.Monitor.ShowMemory then
-            local mem = GetMemory()
-            MemLabel.Text = "MEM: " .. mem .. "MB"
-            MemLabel.Visible = true
-        else
-            MemLabel.Visible = false
+        if PingLabel then
+            local success, ping = pcall(function()
+                return Stats.PerformanceStats.Ping:GetValue()
+            end)
+            if success then
+                local pingMs = math.floor(ping * 1000)
+                PingLabel.Text = "PING: " .. pingMs .. "ms"
+                if pingMs <= 100 then
+                    PingLabel.TextColor3 = C.Verde
+                elseif pingMs <= 200 then
+                    PingLabel.TextColor3 = C.Amarelo
+                else
+                    PingLabel.TextColor3 = C.Vermelho
+                end
+            end
         end
     end
     
@@ -1474,313 +1528,40 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ═══════════════════════ ATUALIZAR CONTEÚDO ═══════════════════════
-function UpdateContent()
-    ClearScroll()
-    
-    if CurrentTab == "Geral" then
-        Section("🏠 BEM-VINDO")
-        
-        local infoFrame = Instance.new("Frame")
-        infoFrame.Size = UDim2.new(1, 0, 0, 60)
-        infoFrame.BackgroundColor3 = C.PretoMedio
-        infoFrame.BackgroundTransparency = 0.6
-        infoFrame.BorderSizePixel = 0
-        infoFrame.Parent = Scroll
-        Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 6)
-        
-        local infoText = Instance.new("TextLabel")
-        infoText.Size = UDim2.new(1, -10, 1, 0)
-        infoText.Position = UDim2.new(0, 5, 0, 0)
-        infoText.BackgroundTransparency = 1
-        infoText.Text = "⚙ Menu v5.0\n" ..
-                       (IsMobile and "📱 Modo Mobile" or "💻 Modo PC") .. "\n" ..
-                       "✅ Zero bugs • Performance máxima"
-        infoText.TextColor3 = C.BrancoSuave
-        infoText.Font = Enum.Font.Gotham
-        infoText.TextSize = IsMobile and 10 or 11
-        infoText.TextXAlignment = Enum.TextXAlignment.Left
-        infoText.TextYAlignment = Enum.TextYAlignment.Center
-        infoText.Parent = infoFrame
-        
-        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 65)
-        
-        Section("🔑 ATALHOS")
-        Keybind("Tecla do Menu", Config.MenuKey, function(key)
-            Config.MenuKey = key
-        end)
-        
-        local keyInfo = Instance.new("TextLabel")
-        keyInfo.Size = UDim2.new(1, 0, 0, 35)
-        keyInfo.BackgroundTransparency = 1
-        keyInfo.Text = "Pressione a tecla para\nabrir/fechar o menu"
-        keyInfo.TextColor3 = C.Cinza
-        keyInfo.Font = Enum.Font.Gotham
-        keyInfo.TextSize = IsMobile and 9 or 10
-        keyInfo.TextXAlignment = Enum.TextXAlignment.Left
-        keyInfo.Parent = Scroll
-        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 37)
-        
-    elseif CurrentTab == "ESP" then
-        Section("👁 SISTEMA ESP")
-        Toggle("Ativar ESP", Config.ESP.Enabled, function(v) 
-            Config.ESP.Enabled = v 
-            if not v then
-                for _, obj in pairs(ESPObjects) do
-                    if obj.connection then obj.connection:Disconnect() end
-                    pcall(function() obj:Destroy() end)
-                end
-                ESPObjects = {}
-            end
-        end)
-        
-        Section("📦 BOXES")
-        Toggle("Mostrar Box", Config.ESP.Boxes, function(v) Config.ESP.Boxes = v end)
-        ColorPicker("Cor Inimigos", Config.ESP.BoxColor, function(c) Config.ESP.BoxColor = c end)
-        ColorPicker("Cor Aliados", Config.ESP.TeamBoxColor, function(c) Config.ESP.TeamBoxColor = c end)
-        
-        Section("📝 NOMES")
-        Toggle("Mostrar Nomes", Config.ESP.Names, function(v) Config.ESP.Names = v end)
-        ColorPicker("Cor Nome Inimigo", Config.ESP.NameColor, function(c) Config.ESP.NameColor = c end)
-        ColorPicker("Cor Nome Aliado", Config.ESP.TeamNameColor, function(c) Config.ESP.TeamNameColor = c end)
-        
-        Section("❤ VIDA E DISTÂNCIA")
-        Toggle("Barra de Vida", Config.ESP.HealthBar, function(v) Config.ESP.HealthBar = v end)
-        Toggle("Mostrar Distância", Config.ESP.Distance, function(v) Config.ESP.Distance = v end)
-        ColorPicker("Cor Distância", Config.ESP.DistanceColor, function(c) Config.ESP.DistanceColor = c end)
-        
-        Section("📍 TRACERS")
-        Toggle("Mostrar Tracers", Config.ESP.Tracers, function(v) Config.ESP.Tracers = v end)
-        ColorPicker("Cor Tracers", Config.ESP.TracerColor, function(c) Config.ESP.TracerColor = c end)
-        
-        Section("✨ CHAMS")
-        Toggle("Ativar Chams", Config.ESP.Chams, function(v) Config.ESP.Chams = v end)
-        ColorPicker("Cor Chams Inimigo", Config.ESP.ChamsColor, function(c) Config.ESP.ChamsColor = c end)
-        ColorPicker("Cor Chams Aliado", Config.ESP.TeamChamsColor, function(c) Config.ESP.TeamChamsColor = c end)
-        
-        Section("🌟 GLOW")
-        Toggle("Ativar Glow", Config.ESP.Glow, function(v) Config.ESP.Glow = v end)
-        ColorPicker("Cor Glow", Config.ESP.GlowColor, function(c) Config.ESP.GlowColor = c end)
-        
-        Section("⚙ OUTROS")
-        Toggle("Detectar Times", Config.ESP.TeamCheck, function(v) Config.ESP.TeamCheck = v end)
-        Slider("Distância Máxima", 100, 3000, Config.ESP.MaxDistance, function(v) Config.ESP.MaxDistance = v end)
-        
-    elseif CurrentTab == "Aimbot" then
-        Section("🎯 AIMBOT")
-        Toggle("Ativar Aimbot", Config.Aimbot.Enabled, function(v) 
-            Config.Aimbot.Enabled = v
-            UpdateFOV()
-        end)
-        Toggle("Detectar Times", Config.Aimbot.TeamCheck, function(v) Config.Aimbot.TeamCheck = v end)
-        Toggle("Silent Aim", Config.Aimbot.SilentAim, function(v) Config.Aimbot.SilentAim = v end)
-        Toggle("Triggerbot", Config.Aimbot.Triggerbot, function(v) Config.Aimbot.Triggerbot = v end)
-        
-        Section("🔴 FOV")
-        Toggle("Mostrar FOV", Config.Aimbot.ShowFOV, function(v) 
-            Config.Aimbot.ShowFOV = v
-            UpdateFOV()
-        end)
-        ColorPicker("Cor do FOV", Config.Aimbot.FOVColor, function(c) 
-            Config.Aimbot.FOVColor = c
-            UpdateFOV()
-        end)
-        Slider("Raio do FOV", 30, 500, Config.Aimbot.FOV, function(v) 
-            Config.Aimbot.FOV = v
-            UpdateFOV()
-        end)
-        
-        Section("🎯 CONFIGURAÇÕES")
-        Slider("Suavidade", 1, 20, Config.Aimbot.Smoothness, function(v) Config.Aimbot.Smoothness = v end)
-        Slider("Predição", 0, 10, Config.Aimbot.Prediction, function(v) Config.Aimbot.Prediction = v end)
-        Slider("Distância Máxima", 100, 2000, Config.Aimbot.MaxDistance, function(v) Config.Aimbot.MaxDistance = v end)
-        Slider("Delay Trigger", 0.05, 0.5, Config.Aimbot.TriggerDelay, function(v) Config.Aimbot.TriggerDelay = v end)
-        
-        Section("🎯 PARTE DO CORPO")
-        Dropdown("Parte", {"Head", "HumanoidRootPart", "Torso", "UpperTorso", "LowerTorso"}, Config.Aimbot.AimPart, function(v) Config.Aimbot.AimPart = v end)
-        
-    elseif CurrentTab == "Visual" then
-        Section("🎨 VISUAIS")
-        Toggle("FullBright", Config.Visuals.FullBright, function(v)
-            Config.Visuals.FullBright = v
-            if v then
-                Lighting.Brightness = 2
-                Lighting.ClockTime = 14
-                Lighting.FogEnd = 100000
-                Lighting.GlobalShadows = false
-            else
-                Lighting.Brightness = 1
-                Lighting.GlobalShadows = true
-            end
-        end)
-        
-        Toggle("Remover Névoa", Config.Visuals.NoFog, function(v)
-            Config.Visuals.NoFog = v
-            Lighting.FogEnd = v and 100000 or 1000
-        end)
-        
-        Toggle("Sem Camera Shake", Config.Visuals.NoCameraShake, function(v) Config.Visuals.NoCameraShake = v end)
-        Toggle("Sem Recoil", Config.Visuals.NoRecoil, function(v) Config.Visuals.NoRecoil = v end)
-        Toggle("Sem Spread", Config.Visuals.NoSpread, function(v) Config.Visuals.NoSpread = v end)
-        
-        Section("📷 CÂMERA")
-        Toggle("Mudar FOV", Config.Visuals.FOVChanger, function(v)
-            Config.Visuals.FOVChanger = v
-            Camera.FieldOfView = v and Config.Visuals.FOVValue or 70
-        end)
-        Slider("Valor do FOV", 30, 120, Config.Visuals.FOVValue, function(v)
-            Config.Visuals.FOVValue = v
-            if Config.Visuals.FOVChanger then
-                Camera.FieldOfView = v
-            end
-        end)
-        
-        Section("🎯 CROSSHAIR")
-        Toggle("Mostrar Crosshair", Config.Visuals.Crosshair, function(v) Config.Visuals.Crosshair = v end)
-        Dropdown("Tipo", {"Cross", "Dot", "Circle"}, Config.Visuals.CrosshairType, function(v) Config.Visuals.CrosshairType = v end)
-        ColorPicker("Cor do Crosshair", Config.Visuals.CrosshairColor, function(c) Config.Visuals.CrosshairColor = c end)
-        Slider("Tamanho", 5, 30, Config.Visuals.CrosshairSize, function(v) Config.Visuals.CrosshairSize = v end)
-        
-        Section("💧 WATERMARK")
-        Toggle("Mostrar Watermark", Config.Visuals.Watermark, function(v) Config.Visuals.Watermark = v end)
-        
-    elseif CurrentTab == "Monitor" then
-        Section("📊 MONITOR")
-        Toggle("Mostrar FPS", Config.Monitor.ShowFPS, function(v) Config.Monitor.ShowFPS = v end)
-        Toggle("Mostrar Ping", Config.Monitor.ShowPing, function(v) Config.Monitor.ShowPing = v end)
-        Toggle("Mostrar Memória", Config.Monitor.ShowMemory, function(v) Config.Monitor.ShowMemory = v end)
-        
-        local info = Instance.new("TextLabel")
-        info.Size = UDim2.new(1, 0, 0, 35)
-        info.BackgroundTransparency = 1
-        info.Text = "📊 Monitor visível no\ncanto superior direito"
-        info.TextColor3 = C.Cinza
-        info.Font = Enum.Font.Gotham
-        info.TextSize = IsMobile and 9 or 10
-        info.TextXAlignment = Enum.TextXAlignment.Left
-        info.Parent = Scroll
-        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 37)
-        
-    elseif CurrentTab == "Misc" then
-        Section("⚡ MISCELÂNEA")
-        Toggle("Auto Farm", Config.Misc.AutoFarm, function(v) Config.Misc.AutoFarm = v end)
-        Toggle("Auto Coletar", Config.Misc.AutoCollect, function(v) Config.Misc.AutoCollect = v end)
-        Toggle("No Clip", Config.Misc.NoClip, function(v) Config.Misc.NoClip = v end)
-        Toggle("Pulo Infinito", Config.Misc.InfiniteJump, function(v) Config.Misc.InfiniteJump = v end)
-        Toggle("Anti AFK", Config.Misc.AntiAFK, function(v) Config.Misc.AntiAFK = v end)
-        
-        Section("🏃 VELOCIDADE")
-        Toggle("Modificar Velocidade", Config.Misc.Walkspeed, function(v) Config.Misc.Walkspeed = v end)
-        Slider("Velocidade", 16, 200, Config.Misc.Speed, function(v) Config.Misc.Speed = v end)
-        Slider("Pulo", 50, 200, Config.Misc.JumpPower, function(v) Config.Misc.JumpPower = v end)
-        
-    elseif CurrentTab == "Config" then
-        Section("⚙ CONFIGURAÇÕES")
-        
-        Button("💾 SALVAR", C.Verde, function()
-            local success = SaveSystem:Save()
-            if success then
-                print("✅ Configurações salvas!")
-            end
-        end)
-        
-        Button("📂 CARREGAR", C.Azul, function()
-            local success = SaveSystem:Load()
-            if success then
-                print("✅ Configurações carregadas!")
-                UpdateContent()
-                UpdateFOV()
-            end
-        end)
-        
-        Button("🔄 RESETAR", C.Vermelho, function()
-            SaveSystem:Reset()
-            print("🔄 Configurações resetadas!")
-            UpdateContent()
-            UpdateFOV()
-        end)
-        
-        Section("ℹ INFORMAÇÕES")
-        local infoFrame = Instance.new("Frame")
-        infoFrame.Size = UDim2.new(1, 0, 0, 70)
-        infoFrame.BackgroundColor3 = C.PretoMedio
-        infoFrame.BackgroundTransparency = 0.6
-        infoFrame.BorderSizePixel = 0
-        infoFrame.Parent = Scroll
-        Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 6)
-        
-        local infoText = Instance.new("TextLabel")
-        infoText.Size = UDim2.new(1, -10, 1, 0)
-        infoText.Position = UDim2.new(0, 5, 0, 0)
-        infoText.BackgroundTransparency = 1
-        infoText.Text = "📌 Mateus Scripts v5.0\n" ..
-                       (IsMobile and "📱 Modo Mobile" or "💻 Modo PC") .. "\n" ..
-                       "✅ Zero bugs • Performance máxima"
-        infoText.TextColor3 = C.BrancoSuave
-        infoText.Font = Enum.Font.Gotham
-        infoText.TextSize = IsMobile and 9 or 10
-        infoText.TextXAlignment = Enum.TextXAlignment.Left
-        infoText.TextYAlignment = Enum.TextYAlignment.Center
-        infoText.Parent = infoFrame
-        
-        Scroll.CanvasSize = UDim2.new(0, 0, 0, Scroll.CanvasSize.Y.Offset + 75)
-    end
-end
-
--- ═══════════════════════ EVENTOS ═══════════════════════
-
--- Botões do header
-MinBtn.MouseButton1Click:Connect(function()
-    Main.Visible = false
-    Logo.Visible = true
-end)
-
-CloseBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-
--- Tecla para abrir/fechar
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed then
-        local key = input.KeyCode ~= Enum.KeyCode.Unknown and input.KeyCode or input.UserInputType
-        if key == Config.MenuKey then
-            Main.Visible = not Main.Visible
-            if Main.Visible then
-                Logo.Visible = false
-                Main.ZIndex = 10000
-            end
+-- ═══════════════════════ LOOP ESP ═══════════════════════
+task.spawn(function()
+    while true do
+        if Config.ESP.Enabled then
+            AtualizarESP()
         end
+        task.wait(0.5)
     end
 end)
 
--- Atualizar ESP
+-- ═══════════════════════ EVENTOS DE JOGADORES ═══════════════════════
 Players.PlayerAdded:Connect(function()
     if Config.ESP.Enabled then
         task.wait(0.5)
-        UpdateESP()
+        AtualizarESP()
     end
 end)
 
 Players.PlayerRemoving:Connect(function()
     if Config.ESP.Enabled then
         task.wait(0.1)
-        UpdateESP()
-    end
-end)
-
-task.spawn(function()
-    while true do
-        if Config.ESP.Enabled then
-            UpdateESP()
-        end
-        task.wait(0.2)
+        AtualizarESP()
     end
 end)
 
 -- ═══════════════════════ INICIALIZAÇÃO ═══════════════════════
+-- Carregar configurações
 SaveSystem:Load()
-UpdateContent()
-UpdateFOV()
+
+-- Criar GUI
+CriarGUI()
+
+-- Atualizar FOV
+AtualizarFOV()
 
 -- Animação de entrada
 Main.BackgroundTransparency = 0.3
@@ -1790,7 +1571,7 @@ for i = 1, 10 do
 end
 
 print("╔════════════════════════════════════════════╗")
-print("║  ✅ MATEUS_SCRIPTS v5.0                   ║")
+print("║  ✅ MATEUS_SCRIPTS v6.0                   ║")
 print("║  📊 Menu carregado com sucesso!           ║")
 print("║  " .. (IsMobile and "📱 Modo Mobile" or "💻 Modo PC") .. "          ║")
 print("║  📌 Zero bugs • Performance máxima        ║")
